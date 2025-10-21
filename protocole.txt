@@ -1,0 +1,55 @@
+Commandes texte envoyées par le client (ligne, terminaison '\n'):
+
+REGISTER <username>       -- enregistre le nom d'utilisateur
+LIST                      -- liste les utilisateurs en ligne
+SETBIO <text>             -- définit une bio (newline échappé '\n')
+BIO <username>            -- affiche la bio d'un utilisateur
+CHALLENGE <username>      -- défie un utilisateur
+ACCEPT <username>         -- accepte un défi
+MOVE <pit_index>          -- joue le pit_index (0..5) (server vérifie)
+CHAT <message>            -- message global
+OBSERVE <username>        -- observer la partie d'un joueur
+PRIVATE ON|OFF            -- met en mode privé (refuse observes & challenges)
+SAVEGAMES                 -- liste parties sauvées côté serveur
+QUIT                      -- se déconnecte
+
+Réponses serveur: lignes préfixées par "SERVER:" ou "GAME <id> BOARD" suivi d'un ASCII board.
+
+
+
+## Procédure typique
+1. Après connexion: `REGISTER alice`
+2. Voir qui est en ligne: `LIST`
+3. Rédiger une bio: `SETBIO Bonjour, joueur Awalé.\nJ'aime gagner.`
+4. Défier: `CHALLENGE bob`
+5. Bob reçoit le défi et tape: `ACCEPT alice`
+6. La partie est créée; le serveur indique quel joueur commence.
+7. Jouer: `MOVE 2` (index 0..5)
+8. Observer une partie: `OBSERVE alice`
+9. Chat global: `CHAT Salut tout le monde!`
+10. Rendre son profil privé: `PRIVATE ON`
+11. Lister parties sauvegardées côté serveur: `SAVEGAMES`
+
+## Sauvegarde
+Le serveur sauvegarde les parties terminées dans le répertoire `saved_games/` sous forme de fichiers texte.
+
+## Notes techniques / limites
+- Le serveur vérifie la légalité des coups via le module `game.c`.
+- Plusieurs parties simultanées sont supportées.
+- Les règles implémentées sont une version standard; la vérification de la règle "ne pas affamer l'adversaire" est simplifiée.
+- Extensibilité: le code est réparti pour faciliter ajout d'Elo, tournois, chiffrement, UI, etc.
+
+## Fichiers
+- `server.c`, `client.c`: logique réseau
+- `game.c`, `game.h`: règles et représentation du plateau
+- `Makefile`
+- `saved_games/` : répertoire créé automatiquement pour stocker les parties sauvegardées
+
+## Présentation / Démo
+Pour la démonstration (~10 minutes) :  
+- Montre le serveur en marche.
+- Connecte 2 clients (`alice`, `bob`), fais un challenge et quelques coups.
+- Montre qu'un troisième client peut observer (`OBSERVE alice`).
+- Montre `SETBIO`, `PRIVATE ON`, et `SAVEGAMES`.
+- Montre les fichiers dans `saved_games/`.
+
