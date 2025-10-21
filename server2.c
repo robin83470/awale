@@ -136,10 +136,10 @@ static void app(void)
                l[i]=4;
             }
 
-
+            int tour = 0, choix = 0, bon=1; 
             while (joueur1 < 25 && joueur2<25)
             {
-            int tour = 0, choix = 0, bon =1;
+            
             //char buffer2[150];
             if (bon)
             {
@@ -152,9 +152,9 @@ static void app(void)
 
             strcpy(buffer, "Joueur1: choisissez la case à repartir (1 à 6)\n");
             send_message_to_all_clients(clients, clients[1], actual, buffer, 0);
-
-            }
             bon = 0;
+            }
+            
             
 
 
