@@ -373,6 +373,45 @@ static void send_message_to_all_clients(Client *clients, Client sender, int actu
    }
 }
 
+/**
+ * Envoie un message à un client spécifique.
+ * @param clients Tableau de tous les clients connectés
+ * @param actual Nombre actuel de clients connectés
+ * @param target Nom du client à qui envoyer le message
+ * @param buffer Message à envoyer
+ * @param from_server 0 = message venant d'un client, 1 = message venant du serveur
+ */
+void send_to_specific_client(Client *clients, int actual, const char *target, const char *buffer, char from_server)
+{
+    char message[BUF_SIZE];
+    message[0] = '\0';
+
+    // Cherche le client cible
+    for (int i = 0; i < actual; i++)
+    {
+        if (strcmp(clients[i].name, target) == 0)
+        {
+            // Prépare le message
+            if (from_server == 0)
+            {
+                snprintf(message, BUF_SIZE, "%s : %s", "serveur", buffer);
+            }
+            else
+            {
+                strncpy(message, buffer, BUF_SIZE - 1);
+            }
+
+            // Envoie au client cible
+            write_client(clients[i].sock, message);
+            return;
+        }
+    }
+
+    // Si le client n’existe pas
+    printf("⚠️ Client '%s' introuvable.\n", target);
+}
+
+
 
 void send_message_to_all(Client *clients, int actual, const char *buffer, char from_server)
 {
