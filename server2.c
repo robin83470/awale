@@ -47,6 +47,125 @@ int affichage(int l[12], char *buffer, size_t taille_buffer)
     return 0;
 }
 
+
+// Vérifie si un côté du plateau a encore des graines
+int graines_restantes(int l[12], int debut, int fin)
+{
+    int somme = 0;
+    for(int i = debut; i < fin; i++)
+        somme += l[i];
+    return somme;
+}
+
+
+void copier_plateau(int src[12], int dest[12])
+{
+    for(int i=0; i<12; i++)
+        dest[i] = src[i];
+}
+
+
+
+// Joue un coup (sans vérification), sur un plateau donné, pour un joueur donné
+void jouer_coup_test(int l[12], int choix)
+{
+    int i, j, nb;
+
+    nb = l[choix-1];
+    l[choix-1] = 0;
+
+    for(i = 1; i < nb+1; i++)
+    {
+        if((choix-1+i) > 11)
+        {
+            if(((choix-1+i - 12) == (choix-1)))
+                continue;
+            l[(choix-1+i) % 12] += 1;
+        }
+        else
+        {
+            if(((choix-1+i) % 12) == (choix-1))
+                continue;
+            l[(choix-1+i) % 12] += 1;
+        }
+    }
+
+    // Captures
+    for(i = 0; i < nb; i++)
+    {
+        j = (choix + nb - i) % 12;
+            if(j > 5)
+            {
+                if(l[j] < 4 && l[j] > 1)
+                {
+                    l[j] = 0;
+                }
+                else break;
+            }
+            else break;
+        
+    }
+}
+
+
+
+void jouer_coup(int l[12], int choix)
+{
+    int i, j, nb;
+
+    nb = l[choix-1];
+    l[choix-1] = 0;
+
+    for(i = 1; i < nb+1; i++)
+    {
+        if((choix-1+i) > 11)
+        {
+            if(((choix-1+i - 12) == (choix-1)))
+                continue;
+            l[(choix-1+i) % 12] += 1;
+        }
+        else
+        {
+            if(((choix-1+i) % 12) == (choix-1))
+                continue;
+            l[(choix-1+i) % 12] += 1;
+        }
+    }
+
+    // Captures
+    for(i = 0; i < nb; i++)
+    {
+        j = (choix + nb - i) % 12;
+            if(j > 5)
+            {
+                if(l[j] < 4 && l[j] > 1)
+                {
+                    l[j] = 0;
+                }
+                else break;
+            }
+            else break;
+        
+    }
+}
+
+
+// Vérifie si le coup affame l’adversaire après simulation
+int coup_valide(int l[12], int choix)
+{
+    int copie[12];
+
+    copier_plateau(l, copie);
+
+    jouer_coup_test(copie, choix);
+
+    
+   return graines_restantes(copie, 6, 12) > 0; // l'adversaire (joueur2) doit avoir des graines
+}
+
+
+
+
 static void app(void)
 {
    SOCKET sock = init_connection();
@@ -186,20 +305,29 @@ static void app(void)
                      else if (etat==2)
                      {
                         int choix = nb;
-                        if(choix<1 || choix>6 || clients[i].game.l[choix-1]==0 || !coup_valide(clients[i].game.l, choix, 1, joueur1, joueur2))
+                        if(choix<1 || choix>6 || clients[i].game.l[choix-1]==0 || !coup_valide(clients[i].game.l, choix))
                         {
                               if (choix<1 || choix>6 || clients[i].game.l[choix-1]==0)
-                                 printf("Nombre invalide, veuillez reessayer\n");
-                              else if (!coup_valide(clients[i].game.l, choix, 1, joueur1, joueur2))
-                                 printf("Ce coup affame l’adversaire, choisissez une autre case\n");
+                              {
+                                 strcpy(buffer, "\nNombre invalide, veuillez reessayer\n");
+                                 send_message_to_clients(clients, clients[i], actual, buffer);
+                              }
+                                
+                              else if (!coup_valide(clients[i].game.l, choix ))
+                              {
+                                 strcpy(buffer, "\nCe coup affame l’adversaire, choisissez une autre case\n");
+                                 send_message_to_clients(clients, clients[i], actual, buffer);
+                              }
+                                
                         }
                         else
                         { 
                            strcpy(buffer, "\n\nMessage non compris\n\n");
                            send_message_to_clients(clients, clients[i], actual, buffer); 
+                           //jouer_coup(l, choix, 1, &joueur1, &joueur2);
                         }
 
-                        //jouer_coup(l, choix, 1, &joueur1, &joueur2);
+                        
                                     
 
                         
@@ -218,103 +346,12 @@ static void app(void)
    end_connection(sock);
 }
 
-// Vérifie si un côté du plateau a encore des graines
-int graines_restantes(int l[12], int debut, int fin)
-{
-    int somme = 0;
-    for(int i = debut; i < fin; i++)
-        somme += l[i];
-    return somme;
-}
-
-
-void copier_plateau(int src[12], int dest[12])
-{
-    for(int i=0; i<12; i++)
-        dest[i] = src[i];
-}
-
-
-
-// Joue un coup (sans vérification), sur un plateau donné, pour un joueur donné
-void jouer_coup(int l[12], int choix, int joueur, int *score1, int *score2)
-{
-    int i, j, nb;
-
-    nb = l[choix-1];
-    l[choix-1] = 0;
-
-    for(i = 1; i < nb+1; i++)
-    {
-        if((choix-1+i) > 11)
-        {
-            if(((choix-1+i - 12) == (choix-1)))
-                continue;
-            l[(choix-1+i) % 12] += 1;
-        }
-        else
-        {
-            if(((choix-1+i) % 12) == (choix-1))
-                continue;
-            l[(choix-1+i) % 12] += 1;
-        }
-    }
-
-    // Captures
-    for(i = 0; i < nb; i++)
-    {
-        j = (choix + nb - i) % 12;
-        if(joueur == 1)
-        {
-            if(j > 5)
-            {
-                if(l[j] < 4 && l[j] > 1)
-                {
-                    *score1 += l[j];
-                    l[j] = 0;
-                }
-                else break;
-            }
-            else break;
-        }
-        else // joueur 2
-        {
-            if(j < 6)
-            {
-                if(l[j] < 4 && l[j] > 1)
-                {
-                    *score2 += l[j];
-                    l[j] = 0;
-                }
-                else break;
-            }
-            else break;
-        }
-    }
-}
-
-
-// Vérifie si le coup affame l’adversaire après simulation
-int coup_valide(int l[12], int choix, int joueur, int score1, int score2)
-{
-    int copie[12];
-    int s1 = score1, s2 = score2;
-    copier_plateau(l, copie);
-
-    jouer_coup(copie, choix, joueur, &s1, &s2);
-
-    if (joueur == 1)
-        return graines_restantes(copie, 6, 12) > 0; // l'adversaire (joueur2) doit avoir des graines
-    else
-        return graines_restantes(copie, 0, 6) > 0;  // l'adversaire (joueur1)
-}
 
 
 
 
 void find_game(Client* clients, int actual, int j)
 {  
-   Client *cli;
    int i = 0;
    char buffer[BUF_SIZE];
    for(i = 0; i < actual; i++)
@@ -324,7 +361,6 @@ void find_game(Client* clients, int actual, int j)
       {
          if(clients[i].game.etat == 1)
          {
-            cli = &clients[i];
             clients[i].game.etat = 2;
             clients[j].game.etat = 3;
             strcpy(clients[i].game.nameadv, clients[j].name);
@@ -350,7 +386,7 @@ void find_game(Client* clients, int actual, int j)
          
       }
    }
-   return cli;
+   return;
 }
 
 
