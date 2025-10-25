@@ -106,204 +106,26 @@ static void app(void)
             /* disconnected */
             continue;
          }
-         char name1[20];
-         strcpy(name1, buffer);
-         printf("%s\n", buffer);
          /* what is the new maximum fd ? */
          max = csock > max ? csock : max;
          
          FD_SET(csock, &rdfs);
 
          Client c = { csock };
-         strncpy(c.name, buffer, BUF_SIZE - 1);
-         clients[actual] = c;
-         actual++;
-         if (actual < 2)
-         {
-            strcpy(buffer, "Il manue un joueur pour commencer");
-            send_message_to_all(clients, actual, buffer, 0);
-         }
-         
-         if (actual == 2)
-         {
-
-            strcpy(buffer, "2 joueurs sont connectés la partie va commencer !");
-            send_message_to_all(clients, actual, buffer, 0);
-            int l[12];
-            int joueur1=0, joueur2=0, i, nb;
-            for(i=0; i<12; i++)
-            {
-               l[i]=4;
-            }
-
-            int tour = 0, choix = 0, bon=1; 
-            while (joueur1 < 25 && joueur2<25)
-            {
-            
-            //char buffer2[150];
-            if (bon)
-            {
-               sprintf(buffer, "\n\n NOUVEAU TOUR \n\nPoint du joueur1: %d\nPoint du joueur2: %d\n", joueur1, joueur2);
-
-            send_message_to_all(clients, actual, buffer, 0);
-            
-            affichage(l, buffer, BUF_SIZE);
-            send_message_to_all(clients, actual, buffer, 0);
-
-            strcpy(buffer, "Joueur1: choisissez la case à repartir (1 à 6)\n");
-            send_message_to_all_clients(clients, clients[1], actual, buffer, 0);
-            bon = 0;
-            }
-            
-            
-
-
-
-
-            i = 0;
-            FD_ZERO(&rdfs);
-
-      /* add STDIN_FILENO */
-      FD_SET(STDIN_FILENO, &rdfs);
-
-      /* add the connection socket */
-      FD_SET(sock, &rdfs);
-
-      /* add socket of each client */
-      for(i = 0; i < actual; i++)
-      {
-         FD_SET(clients[i].sock, &rdfs);
-      }
-
-      if(select(max + 1, &rdfs, NULL, NULL, NULL) == -1)
-      {
-         perror("select()");
-         exit(errno);
-      }
-
-      /* something from standard input : i.e keyboard */
-      if(FD_ISSET(STDIN_FILENO, &rdfs))
-      {
-         /* stop process when type on keyboard */
-         break;
-      }
-      else if(FD_ISSET(sock, &rdfs))
-      {
-         /* new client */
-         SOCKADDR_IN csin = { 0 };
-         size_t sinsize = sizeof csin;
-         int csock = accept(sock, (SOCKADDR *)&csin, &sinsize);
-         if(csock == SOCKET_ERROR)
-         {
-            perror("accept()");
-            continue;
-         }
-
-         /* after connecting the client sends its name */
-         if(read_client(csock, buffer) == -1)
-         {
-            /* disconnected */
-            continue;
-         }
-         char name1[20];
-         strcpy(name1, buffer);
-         printf("%s\n", buffer);
-         /* what is the new maximum fd ? */
-         max = csock > max ? csock : max;
-         
-         FD_SET(csock, &rdfs);
-
-         Client c = { csock };
+         c.game.etat = 0;
          strncpy(c.name, buffer, BUF_SIZE - 1);
          clients[actual] = c;
          actual++;
          
-                    
+         strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour joeur, 2 pour être spectateur d'une partie\n\n");
+         send_message_to_clients(clients, c, actual, buffer);      
 
-         }
-
+         
+      }
       else
       {
          int i = 0;
-         if (actual > 1)
-         {
-            for(i = 0; i < actual; i++)
-            {
-               /* a client is talking */
-               if (i==tour)
-               {
-                  if(FD_ISSET(clients[i].sock, &rdfs))
-                  {
-                     Client client = clients[i];
-                     int c = read_client(clients[i].sock, buffer);
-                     /* client disconnected */
-                     if(c == 0)
-                     {
-                        closesocket(clients[i].sock);
-                        remove_client(clients, i, &actual);
-                        strncpy(buffer, client.name, BUF_SIZE - 1);
-                        strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
-                        send_message_to_all_clients(clients, client, actual, buffer, 1);
-                     }
-                     else
-                     {
-                        choix = atoi(buffer);
-                        printf("%d\n", choix);
-                        if(choix<1 || choix>6)
-                        {  
-                           strcpy(buffer, "Nombre invalide veuillez reessayer\n");   
-                        }   
-                        send_message_to_all_clients(clients, clients[1], actual, buffer, 0); //A MODIFER
-                     }
-                     break;
-                  }
-               
-               }
-               else
-               {
-                  if(FD_ISSET(clients[i].sock, &rdfs))
-                  {
-                     Client client = clients[i];
-                     int c = read_client(clients[i].sock, buffer);
-                     /* client disconnected */
-                     if(c == 0)
-                     {
-                        closesocket(clients[i].sock);
-                        remove_client(clients, i, &actual);
-                        strncpy(buffer, client.name, BUF_SIZE - 1);
-                        strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
-                        send_message_to_all_clients(clients, client, actual, buffer, 1);
-                     }
-                     else
-                     {
-                        send_message_to_all_clients(clients, client, actual, buffer, 0);
-                     }
-                     break;
-                  }
-               }
-            }
-         }
-   }
-
-
-
-
-
-
-
-
-            
-                  }
-           
-             }       
-
-         }
-
-      else
-      {
-         int i = 0;
-         if (actual > 1)
-         {
+         int etat, nb;
             for(i = 0; i < actual; i++)
             {
                /* a client is talking */
@@ -311,6 +133,7 @@ static void app(void)
                {
                   Client client = clients[i];
                   int c = read_client(clients[i].sock, buffer);
+                  etat = client.game.etat;
                   /* client disconnected */
                   if(c == 0)
                   {
@@ -322,18 +145,214 @@ static void app(void)
                   }
                   else
                   {
-                     send_message_to_all_clients(clients, client, actual, buffer, 0);
+                     printf("%s\n", buffer);
+                     nb = atoi(buffer);
+                     if (etat==0)
+                     {
+                        if(nb == 1)
+                        {
+                           clients[i].game.etat = 1;
+                           strcpy(buffer, "\n\nNous cherchons une partie, 0 pour annuler\n\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                           find_game(clients, actual, i);
+                   
+
+                        }
+                        else if(nb == 2)
+                        {
+                           clients[i].game.etat = 5;
+                           strcpy(buffer, "\n\nQui veut tu observer?\n\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer); 
+                        }
+                     }
+
+                     else if (etat==1)
+                     {
+                        if(nb == 0)
+                        {
+                           clients[i].game.etat = 0;
+                           strcpy(buffer, "\n\nNous allons la recherche\n\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                   
+
+                        }
+                        else
+                        {
+                           strcpy(buffer, "\n\nMessage non compris\n\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer); 
+                        }
+                     }
+
+                     else if (etat==2)
+                     {
+                        int choix = nb;
+                        if(choix<1 || choix>6 || clients[i].game.l[choix-1]==0 || !coup_valide(clients[i].game.l, choix, 1, joueur1, joueur2))
+                        {
+                              if (choix<1 || choix>6 || clients[i].game.l[choix-1]==0)
+                                 printf("Nombre invalide, veuillez reessayer\n");
+                              else if (!coup_valide(clients[i].game.l, choix, 1, joueur1, joueur2))
+                                 printf("Ce coup affame l’adversaire, choisissez une autre case\n");
+                        }
+                        else
+                        { 
+                           strcpy(buffer, "\n\nMessage non compris\n\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer); 
+                        }
+
+                        //jouer_coup(l, choix, 1, &joueur1, &joueur2);
+                                    
+
+                        
+                        
+                     }
+                     
                   }
                   break;
                }
             }
-         }
-   }
+         
+      }
    }
 
    clear_clients(clients, actual);
    end_connection(sock);
 }
+
+// Vérifie si un côté du plateau a encore des graines
+int graines_restantes(int l[12], int debut, int fin)
+{
+    int somme = 0;
+    for(int i = debut; i < fin; i++)
+        somme += l[i];
+    return somme;
+}
+
+
+void copier_plateau(int src[12], int dest[12])
+{
+    for(int i=0; i<12; i++)
+        dest[i] = src[i];
+}
+
+
+
+// Joue un coup (sans vérification), sur un plateau donné, pour un joueur donné
+void jouer_coup(int l[12], int choix, int joueur, int *score1, int *score2)
+{
+    int i, j, nb;
+
+    nb = l[choix-1];
+    l[choix-1] = 0;
+
+    for(i = 1; i < nb+1; i++)
+    {
+        if((choix-1+i) > 11)
+        {
+            if(((choix-1+i - 12) == (choix-1)))
+                continue;
+            l[(choix-1+i) % 12] += 1;
+        }
+        else
+        {
+            if(((choix-1+i) % 12) == (choix-1))
+                continue;
+            l[(choix-1+i) % 12] += 1;
+        }
+    }
+
+    // Captures
+    for(i = 0; i < nb; i++)
+    {
+        j = (choix + nb - i) % 12;
+        if(joueur == 1)
+        {
+            if(j > 5)
+            {
+                if(l[j] < 4 && l[j] > 1)
+                {
+                    *score1 += l[j];
+                    l[j] = 0;
+                }
+                else break;
+            }
+            else break;
+        }
+        else // joueur 2
+        {
+            if(j < 6)
+            {
+                if(l[j] < 4 && l[j] > 1)
+                {
+                    *score2 += l[j];
+                    l[j] = 0;
+                }
+                else break;
+            }
+            else break;
+        }
+    }
+}
+
+
+// Vérifie si le coup affame l’adversaire après simulation
+int coup_valide(int l[12], int choix, int joueur, int score1, int score2)
+{
+    int copie[12];
+    int s1 = score1, s2 = score2;
+    copier_plateau(l, copie);
+
+    jouer_coup(copie, choix, joueur, &s1, &s2);
+
+    if (joueur == 1)
+        return graines_restantes(copie, 6, 12) > 0; // l'adversaire (joueur2) doit avoir des graines
+    else
+        return graines_restantes(copie, 0, 6) > 0;  // l'adversaire (joueur1)
+}
+
+
+
+
+void find_game(Client* clients, int actual, int j)
+{  
+   Client *cli;
+   int i = 0;
+   char buffer[BUF_SIZE];
+   for(i = 0; i < actual; i++)
+   {
+      /* we don't send message to the sender */
+      if(i != j)
+      {
+         if(clients[i].game.etat == 1)
+         {
+            cli = &clients[i];
+            clients[i].game.etat = 2;
+            clients[j].game.etat = 3;
+            strcpy(clients[i].game.nameadv, clients[j].name);
+            strcpy(clients[j].game.nameadv, clients[i].name);
+            for(int z = 0; z<12; z++)
+            {
+               clients[i].game.l[z] = 4;
+               clients[j].game.l[z] = 4;
+            }
+            clients[i].game.score = 0;
+            clients[j].game.score = 0;
+            
+            strcpy(buffer, "\n\nPartie trouver tu commences!\n\nJoueur1: choisissez la case à repartir (1 à 6)\n\n");
+            send_message_to_clients(clients, clients[i], actual, buffer);
+            
+            strcpy(buffer, "\n\nPartie trouver ton adversaire commences!\n\n");
+            send_message_to_clients(clients, clients[j], actual, buffer);
+            affichage(clients[i].game.l, buffer, BUF_SIZE);
+            send_message_to_clients(clients, clients[i], actual, buffer);
+            send_message_to_clients(clients, clients[j], actual, buffer);
+            break;
+         }
+         
+      }
+   }
+   return cli;
+}
+
 
 static void clear_clients(Client *clients, int actual)
 {
@@ -372,6 +391,25 @@ static void send_message_to_all_clients(Client *clients, Client sender, int actu
       }
    }
 }
+
+void send_message_to_clients(Client *clients, Client recever, int actual, const char *buffer)
+{
+   int i = 0;
+   char message[BUF_SIZE];
+   message[0] = 0;
+   for(i = 0; i < actual; i++)
+   {
+      /* we send message to the sender */
+      if(recever.sock == clients[i].sock)
+      {
+         strncat(message, buffer, sizeof message - strlen(message) - 1);
+         write_client(clients[i].sock, message);
+         break;
+      }
+
+   }
+}
+
 
 /**
  * Envoie un message à un client spécifique.
@@ -420,11 +458,10 @@ void send_message_to_all(Client *clients, int actual, const char *buffer, char f
    message[0] = 0;
    for(i = 0; i < actual; i++)
    {
-         if(from_server == 0)
-         {
-            strncpy(message, "serveur", BUF_SIZE - 1);
-            strncat(message, " : ", sizeof message - strlen(message) - 1);
-         }
+         
+         strncpy(message, "serveur", BUF_SIZE - 1);
+         strncat(message, " : ", sizeof message - strlen(message) - 1);
+         
          strncat(message, buffer, sizeof message - strlen(message) - 1);
          write_client(clients[i].sock, message);
    }
