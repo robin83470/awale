@@ -29,18 +29,35 @@ static void end(void)
 
 int affichage(int l[12], char *buffer, size_t taille_buffer)
 {
-    int i;
     int offset = 0;
+    int i;
 
-    // Première ligne
-    for (i = 0; i < 6 && offset < taille_buffer; i++) {
-        offset += snprintf(buffer + offset, taille_buffer - offset, "%d   ", l[i]);
+
+    // Camp adverse
+    offset += snprintf(buffer + offset, taille_buffer - offset, "Adversaire: ");
+    for (i = 11; i >= 6 && offset < (int)taille_buffer; i--) {
+        offset += snprintf(buffer + offset, taille_buffer - offset, "%3d ", l[i]);
     }
     offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
 
-    // Deuxième ligne
-    for (i = 11; i > 5 && offset < taille_buffer; i--) {
-        offset += snprintf(buffer + offset, taille_buffer - offset, "%d   ", l[i]);
+    // Ligne de séparation
+    offset += snprintf(buffer + offset, taille_buffer - offset, "             ");
+    for (i = 0; i < 6 && offset < (int)taille_buffer; i++) {
+        offset += snprintf(buffer + offset, taille_buffer - offset, "----");
+    }
+    offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
+
+    // Votre camp
+    offset += snprintf(buffer + offset, taille_buffer - offset, "Vous:        ");
+    for (i = 0; i < 6 && offset < (int)taille_buffer; i++) {
+        offset += snprintf(buffer + offset, taille_buffer - offset, "%3d ", l[i]);
+    }
+    offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
+
+    // Ligne des indices de votre camp (1 à 6)
+    offset += snprintf(buffer + offset, taille_buffer - offset, "             ");
+    for (i = 0; i < 6 && offset < (int)taille_buffer; i++) {
+        offset += snprintf(buffer + offset, taille_buffer - offset, "%3d ", i + 1);
     }
     offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
 
@@ -64,30 +81,34 @@ void copier_plateau(int src[12], int dest[12])
         dest[i] = src[i];
 }
 
+void copierinverse_plateau(int src[12], int dest[12])
+{
+    for (int i = 0; i < 6; i++) {
+        dest[i] = src[6 + i];     
+        dest[i + 6] = src[0 + i];  
+    }
+}
+
 
 
 // Joue un coup (sans vérification), sur un plateau donné, pour un joueur donné
 void jouer_coup_test(int l[12], int choix)
 {
-    int i, j, nb;
-
+    int i, j, nb, pos;
+    
     nb = l[choix-1];
     l[choix-1] = 0;
 
     for(i = 1; i < nb+1; i++)
     {
-        if((choix-1+i) > 11)
-        {
-            if(((choix-1+i - 12) == (choix-1)))
-                continue;
-            l[(choix-1+i) % 12] += 1;
-        }
-        else
-        {
-            if(((choix-1+i) % 12) == (choix-1))
-                continue;
-            l[(choix-1+i) % 12] += 1;
-        }
+      pos = ((choix-1+i) % 12);
+        
+      if(((pos) == (choix-1)))
+            continue;
+            
+      
+      l[pos] += 1;
+        
     }
 
     // Captures
@@ -96,11 +117,11 @@ void jouer_coup_test(int l[12], int choix)
         j = (choix + nb - i) % 12;
             if(j > 5)
             {
-                if(l[j] < 4 && l[j] > 1)
-                {
-                    l[j] = 0;
-                }
-                else break;
+               if(l[j] < 4 && l[j] > 1)
+               {
+                 l[j] = 0;
+               }
+               else break;
             }
             else break;
         
@@ -109,27 +130,24 @@ void jouer_coup_test(int l[12], int choix)
 
 
 
-void jouer_coup(int l[12], int choix)
+void jouer_coup(Client * clients, int choix, int joueur1, int joueur2)
 {
-    int i, j, nb;
-
-    nb = l[choix-1];
-    l[choix-1] = 0;
+    int i, j, nb, pos;
+    
+    nb = clients[joueur1].game.l[choix-1];
+    clients[joueur1].game.l[choix-1] = 0;
 
     for(i = 1; i < nb+1; i++)
     {
-        if((choix-1+i) > 11)
-        {
-            if(((choix-1+i - 12) == (choix-1)))
-                continue;
-            l[(choix-1+i) % 12] += 1;
-        }
-        else
-        {
-            if(((choix-1+i) % 12) == (choix-1))
-                continue;
-            l[(choix-1+i) % 12] += 1;
-        }
+      pos = ((choix-1+i) %  12);
+        
+      if(((pos) == (choix-1)))
+            continue;
+            
+      
+      printf("pos: %d\n", pos);
+      clients[joueur1].game.l[pos] += 1;
+        
     }
 
     // Captures
@@ -138,11 +156,12 @@ void jouer_coup(int l[12], int choix)
         j = (choix + nb - i) % 12;
             if(j > 5)
             {
-                if(l[j] < 4 && l[j] > 1)
-                {
-                    l[j] = 0;
-                }
-                else break;
+               if(clients[joueur1].game.l[j] < 4 && clients[joueur1].game.l[j] > 1)
+               {
+                  clients[joueur1].game.score += clients[joueur1].game.l[j];
+                  clients[joueur1].game.l[j] = 0;
+               }
+               else break;
             }
             else break;
         
@@ -160,11 +179,64 @@ int coup_valide(int l[12], int choix)
     jouer_coup_test(copie, choix);
 
     
-   return graines_restantes(copie, 6, 12) > 0; // l'adversaire (joueur2) doit avoir des graines
+   return (graines_restantes(copie, 6, 12) > 0); // l'adversaire (joueur2) doit avoir des graines
 }
 
 
+int find_adversaire(Client* clients, int actual, int j)
+{
+   int i;
+   char adv[BUF_SIZE];
+   strcpy(adv, clients[j].game.nameadv);
+   for(i = 0; i < actual; i++)
+   {
+      if(strcmp(clients[i].name, adv) == 0)
+         {
+            return i;
+         } 
+   }
+   return -1;
+}
 
+
+void find_game(Client* clients, int actual, int j)
+{  
+   int i = 0;
+   char buffer[BUF_SIZE];
+   for(i = 0; i < actual; i++)
+   {
+      /* we don't send message to the sender */
+      if(i != j)
+      {
+         if(clients[i].game.etat == 1)
+         {
+            clients[i].game.etat = 2;
+            clients[j].game.etat = 3;
+            strcpy(clients[i].game.nameadv, clients[j].name);
+            strcpy(clients[j].game.nameadv, clients[i].name);
+            for(int z = 0; z<12; z++)
+            {
+               clients[i].game.l[z] = 4;
+               clients[j].game.l[z] = 4;
+            }
+            clients[i].game.score = 0;
+            clients[j].game.score = 0;
+            
+            strcpy(buffer, "\n\nPartie trouver tu commences!\n\nJoueur1: choisissez la case à repartir (1 à 6)\n\n");
+            send_message_to_clients(clients, clients[i], actual, buffer);
+            
+            strcpy(buffer, "\n\nPartie trouver ton adversaire commences!\n\n");
+            send_message_to_clients(clients, clients[j], actual, buffer);
+            affichage(clients[i].game.l, buffer, BUF_SIZE);
+            send_message_to_clients(clients, clients[i], actual, buffer);
+            send_message_to_clients(clients, clients[j], actual, buffer);
+            break;
+         }
+         
+      }
+   }
+   return;
+}
 
 static void app(void)
 {
@@ -233,6 +305,10 @@ static void app(void)
          Client c = { csock };
          c.game.etat = 0;
          strncpy(c.name, buffer, BUF_SIZE - 1);
+         /*for(int p = 0; p < 12; p++)
+         {
+            c.game.l[p] = 4;
+         }*/
          clients[actual] = c;
          actual++;
          
@@ -264,8 +340,9 @@ static void app(void)
                   }
                   else
                   {
-                     printf("%s\n", buffer);
+                     //printf("%s\n", buffer);
                      nb = atoi(buffer);
+                     //printf("%d\n", etat);
                      if (etat==0)
                      {
                         if(nb == 1)
@@ -301,17 +378,20 @@ static void app(void)
                            send_message_to_clients(clients, clients[i], actual, buffer); 
                         }
                      }
-
+                     
                      else if (etat==2)
                      {
-                        int choix = nb;
-                        if(choix<1 || choix>6 || clients[i].game.l[choix-1]==0 || !coup_valide(clients[i].game.l, choix))
+                        int choix = nb, adv;
+                        printf("%d\n", choix);
+                        if(choix<1 || choix>6 || clients[i].game.l[choix-1]==0 )//|| !coup_valide(clients[i].game.l, choix)
                         {
+
                               if (choix<1 || choix>6 || clients[i].game.l[choix-1]==0)
                               {
                                  strcpy(buffer, "\nNombre invalide, veuillez reessayer\n");
                                  send_message_to_clients(clients, clients[i], actual, buffer);
                               }
+                              
                                 
                               else if (!coup_valide(clients[i].game.l, choix ))
                               {
@@ -322,9 +402,31 @@ static void app(void)
                         }
                         else
                         { 
-                           strcpy(buffer, "\n\nMessage non compris\n\n");
-                           send_message_to_clients(clients, clients[i], actual, buffer); 
-                           //jouer_coup(l, choix, 1, &joueur1, &joueur2);
+
+                           adv = find_adversaire(clients, actual, i);
+                           jouer_coup(clients, choix, i, adv);
+                           copierinverse_plateau(clients[i].game.l,clients[adv].game.l);
+                           strcpy(buffer, "\nCe coup a été joué\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                           //send_message_to_clients(clients, clients[adv], actual, buffer);
+                           affichage(clients[i].game.l, buffer, BUF_SIZE);
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                           //affichage(clients[adv].game.l, buffer, BUF_SIZE);
+                           //send_message_to_clients(clients, clients[adv], actual, buffer);
+                           if (clients[i].game.score > 25)
+                           {
+
+                           }
+                           else
+                           {
+                              clients[adv].game.etat = 2;
+                              clients[i].game.etat = 3;
+                              strcpy(buffer, "\nC'est à toi de jouer revoici le plateau !\n");
+                              send_message_to_clients(clients, clients[adv], actual, buffer);
+                              affichage(clients[adv].game.l, buffer, BUF_SIZE);
+                              send_message_to_clients(clients, clients[adv], actual, buffer);
+
+                           }
                         }
 
                         
@@ -350,44 +452,7 @@ static void app(void)
 
 
 
-void find_game(Client* clients, int actual, int j)
-{  
-   int i = 0;
-   char buffer[BUF_SIZE];
-   for(i = 0; i < actual; i++)
-   {
-      /* we don't send message to the sender */
-      if(i != j)
-      {
-         if(clients[i].game.etat == 1)
-         {
-            clients[i].game.etat = 2;
-            clients[j].game.etat = 3;
-            strcpy(clients[i].game.nameadv, clients[j].name);
-            strcpy(clients[j].game.nameadv, clients[i].name);
-            for(int z = 0; z<12; z++)
-            {
-               clients[i].game.l[z] = 4;
-               clients[j].game.l[z] = 4;
-            }
-            clients[i].game.score = 0;
-            clients[j].game.score = 0;
-            
-            strcpy(buffer, "\n\nPartie trouver tu commences!\n\nJoueur1: choisissez la case à repartir (1 à 6)\n\n");
-            send_message_to_clients(clients, clients[i], actual, buffer);
-            
-            strcpy(buffer, "\n\nPartie trouver ton adversaire commences!\n\n");
-            send_message_to_clients(clients, clients[j], actual, buffer);
-            affichage(clients[i].game.l, buffer, BUF_SIZE);
-            send_message_to_clients(clients, clients[i], actual, buffer);
-            send_message_to_clients(clients, clients[j], actual, buffer);
-            break;
-         }
-         
-      }
-   }
-   return;
-}
+
 
 
 static void clear_clients(Client *clients, int actual)
