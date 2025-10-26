@@ -114,7 +114,7 @@ void jouer_coup_test(int l[12], int choix)
     // Captures
     for(i = 0; i < nb; i++)
     {
-        j = (choix + nb - i) % 12;
+        j = (choix -1 + nb - i) % 12;
             if(j > 5)
             {
                if(l[j] < 4 && l[j] > 1)
@@ -153,7 +153,7 @@ void jouer_coup(Client * clients, int choix, int joueur1, int joueur2)
     // Captures
     for(i = 0; i < nb; i++)
     {
-        j = (choix + nb - i) % 12;
+        j = (choix -1 + nb - i) % 12;
             if(j > 5)
             {
                if(clients[joueur1].game.l[j] < 4 && clients[joueur1].game.l[j] > 1)
@@ -383,7 +383,7 @@ static void app(void)
                      {
                         int choix = nb, adv;
                         printf("%d\n", choix);
-                        if(choix<1 || choix>6 || clients[i].game.l[choix-1]==0 )//|| !coup_valide(clients[i].game.l, choix)
+                        if(choix<1 || choix>6 || clients[i].game.l[choix-1]==0 || !coup_valide(clients[i].game.l, choix))//
                         {
 
                               if (choix<1 || choix>6 || clients[i].game.l[choix-1]==0)
