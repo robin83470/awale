@@ -199,20 +199,20 @@ int find_player(Client* clients, int actual, int j)
 }
 
 
-/*int find_player_name(Client* clients, int actual, char * name)
+int find_player_name(Client* clients, int actual, char * name)
 {
    int i;
-   char adv[BUF_SIZE];
-   strcpy(adv, clients[].game.nameadv);
+   char p[BUF_SIZE];
+   strcpy(p, name);
    for(i = 0; i < actual; i++)
    {
-      if(strcmp(clients[i].name, adv) == 0)
+      if(strcmp(clients[i].name, p) == 0)
          {
             return i;
          } 
    }
    return -1;
-}*/
+}
 
 
 void find_game(Client* clients, int actual, int j)
@@ -401,6 +401,11 @@ static void app(void)
                            strcpy(buffer, "\nEnvois le nom du joueur que tu veux observer ou 0 pour annuler\n");
                            send_message_to_clients(clients, clients[i], actual, buffer);  
                         }
+                        else
+                        {
+                           strcpy(buffer, "\nMessage non compris\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);  
+                        }
                      }
 
                      else if (etat==1)
@@ -492,14 +497,21 @@ static void app(void)
                      
                      else if (etat==5)
                      {
+                        if (nb == 0)
+                        {
+                           strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour joueur, 2 pour être spectateur d'une partie\n\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);  
+                        }
                         int p = find_player_name(clients, actual, buffer);
-                        char message[BUF_SIZE];
-                        message[0] = 0;
-                        clients[i].etat = 3;
-                        strncpy(message, clients[i].name, BUF_SIZE - 1);
-                        strncat(message, " : ", sizeof message - strlen(message) - 1);
-                        strncat(message, buffer, sizeof message - strlen(message) - 1);
-                        send_message_to_clients(clients, clients[adv], actual, message);
+                        if (p==-1 || (clients[p].etat!=2 && clients[p].etat!=3 && clients[p].etat!=6 && clients[p].etat!=7 && clients[p].etat!=8))
+                        {
+                           strcpy(buffer, "\nJoueur introuvable ou plus en partie\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                        }
+                        clients[i].etat = 4;
+                        strcpy(clients[i].namespec, buffer);
+                        clients[p].game.spec = 1;
+
                         strcpy(buffer, "\nEnvois c pour chatter\n");
                         send_message_to_clients(clients, clients[i], actual, buffer);
                      }
