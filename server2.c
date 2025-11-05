@@ -749,6 +749,22 @@ static void write_client(SOCKET sock, const char *buffer)
    }
 }
 
+void listerJoueurs(Client * client,int actual, char * buffer, size_t taille_buffer)
+{
+   int offset = 0;
+   int i;
+
+
+   // Camp adverse
+   for (i = 0; i < actual; i++)
+   {
+      offset += snprintf(buffer + offset, taille_buffer - offset, client[i].name);
+      offset += snprintf(buffer + offset, taille_buffer - offset, "/n");
+   }
+
+   return;
+}
+
 int main(int argc, char **argv)
 {
    init();
