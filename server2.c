@@ -199,6 +199,22 @@ int find_player(Client* clients, int actual, int j)
 }
 
 
+/*int find_player_name(Client* clients, int actual, char * name)
+{
+   int i;
+   char adv[BUF_SIZE];
+   strcpy(adv, clients[].game.nameadv);
+   for(i = 0; i < actual; i++)
+   {
+      if(strcmp(clients[i].name, adv) == 0)
+         {
+            return i;
+         } 
+   }
+   return -1;
+}*/
+
+
 void find_game(Client* clients, int actual, int j)
 {  
    int i = 0;
@@ -474,6 +490,20 @@ static void app(void)
                         send_message_to_clients(clients, clients[i], actual, buffer);
                      }
                      
+                     else if (etat==5)
+                     {
+                        int p = find_player_name(clients, actual, buffer);
+                        char message[BUF_SIZE];
+                        message[0] = 0;
+                        clients[i].etat = 3;
+                        strncpy(message, clients[i].name, BUF_SIZE - 1);
+                        strncat(message, " : ", sizeof message - strlen(message) - 1);
+                        strncat(message, buffer, sizeof message - strlen(message) - 1);
+                        send_message_to_clients(clients, clients[adv], actual, message);
+                        strcpy(buffer, "\nEnvois c pour chatter\n");
+                        send_message_to_clients(clients, clients[i], actual, buffer);
+                     }
+
                      else if (etat==6)
                      {
                         int choix = nb, adv;
@@ -543,7 +573,7 @@ static void app(void)
                               affichage(clients[adv].game.l, buffer, BUF_SIZE);
                               send_message_to_clients(clients, clients[adv], actual, buffer);
                               snprintf(buffer, BUF_SIZE, "\nTon score: %d\n Score de ton adversaire: %d\n\nEnvois j pour jouer ou c pour chatter", clients[adv].game.score, clients[i].game.score);
-                              send_message_to_clients(clients, clients[i], actual, buffer);
+                              send_message_to_clients(clients, clients[adv], actual, buffer);
 
                            }
                         }
