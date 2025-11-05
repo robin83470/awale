@@ -1,19 +1,39 @@
-CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -O2
-SRCS = server.c game.c
-OBJS = $(SRCS:.c=.o)
-SERVER = awal_server
-CLIENT = awal_client
+# Nom des exécutables
+SERVER = server
+CLIENT = client
 
+# Fichiers sources
+SERVER_SRC = server2.c
+CLIENT_SRC = client2.c
+
+# Fichiers objets
+SERVER_OBJ = $(SERVER_SRC:.c=.o)
+CLIENT_OBJ = $(CLIENT_SRC:.c=.o)
+
+# Compilateur et options
+CC = gcc
+CFLAGS = -Wall -Wextra -g
+
+# Règle par défaut
 all: $(SERVER) $(CLIENT)
 
-$(SERVER): server.c game.c game.h
-	$(CC) $(CFLAGS) -o $(SERVER) server.c game.c
+# Compilation du serveur
+$(SERVER): $(SERVER_OBJ)
+	$(CC) $(CFLAGS) -o $@ $^
 
-$(CLIENT): client.c
-	$(CC) $(CFLAGS) -o $(CLIENT) client.c
+# Compilation du client
+$(CLIENT): $(CLIENT_OBJ)
+	$(CC) $(CFLAGS) -o $@ $^
 
+# Règle générique pour les fichiers objets
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Nettoyage
 clean:
-	rm -f $(SERVER) $(CLIENT) *.o saved_games/*.txt
+	rm -f *.o $(SERVER) $(CLIENT)
 
-.PHONY: all clean
+# Pour forcer la recompilation complète
+re: clean all
+
+.PHONY: all clean re
