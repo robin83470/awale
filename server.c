@@ -153,4 +153,7 @@ void handle_list(Client *c) {
         if (strlen(cl->username)>0) {
             char line[128];
             snprintf(line,sizeof(line), " - %s%s%s\n", cl->username,
-                cl->private_mode ? " (private)":"", cl->st_
+                cl->private_mode ? " (private)":"", cl->st_);
+        }
+    }
+}
