@@ -45,6 +45,8 @@ static void write_client(SOCKET sock, const char *buffer);
 static void send_message_to_all_clients(Client *clients, Client client, int actual, const char *buffer, char from_server);
 static void remove_client(Client *clients, int to_remove, int *actual);
 static void clear_clients(Client *clients, int actual);
+void send_message_to_clients(Client *clients, Client recever, int actual, const char *buffer);
 void find_game(Client* clients, int actual, int j);
+void send_message_spec(Client *clients, Client player, int actual, const char *message, int j);
 
 #endif /* guard */
