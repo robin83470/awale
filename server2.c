@@ -292,6 +292,22 @@ int find_player(Client* clients, int actual, int j)
 }
 
 
+int find_player_name(Client* clients, int actual, char * name)
+{
+   int i;
+   char p[BUF_SIZE];
+   strcpy(p, name);
+   for(i = 0; i < actual; i++)
+   {
+      if(strcmp(clients[i].name, p) == 0)
+         {
+            return i;
+         } 
+   }
+   return -1;
+}
+
+
 void find_game(Client* clients, int actual, int j)
 {  
    int i = 0;
@@ -478,6 +494,11 @@ static void app(void)
                            strcpy(buffer, "\nEnvois le nom du joueur que tu veux observer ou 0 pour annuler\n");
                            send_message_to_clients(clients, clients[i], actual, buffer);  
                         }
+                        else
+                        {
+                           strcpy(buffer, "\nMessage non compris\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);  
+                        }
                      }
 
                      else if (etat==1)
@@ -567,6 +588,27 @@ static void app(void)
                         send_message_to_clients(clients, clients[i], actual, buffer);
                      }
                      
+                     else if (etat==5)
+                     {
+                        if (nb == 0)
+                        {
+                           strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour joueur, 2 pour être spectateur d'une partie\n\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);  
+                        }
+                        int p = find_player_name(clients, actual, buffer);
+                        if (p==-1 || (clients[p].etat!=2 && clients[p].etat!=3 && clients[p].etat!=6 && clients[p].etat!=7 && clients[p].etat!=8))
+                        {
+                           strcpy(buffer, "\nJoueur introuvable ou plus en partie\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                        }
+                        clients[i].etat = 4;
+                        strcpy(clients[i].namespec, buffer);
+                        clients[p].game.spec = 1;
+
+                        strcpy(buffer, "\nEnvois c pour chatter\n");
+                        send_message_to_clients(clients, clients[i], actual, buffer);
+                     }
+
                      else if (etat==6)
                      {
                         int choix = nb, adv;
@@ -636,7 +678,7 @@ static void app(void)
                               affichage(clients[adv].game.l, buffer, BUF_SIZE);
                               send_message_to_clients(clients, clients[adv], actual, buffer);
                               snprintf(buffer, BUF_SIZE, "\nTon score: %d\n Score de ton adversaire: %d\n\nEnvois j pour jouer ou c pour chatter", clients[adv].game.score, clients[i].game.score);
-                              send_message_to_clients(clients, clients[i], actual, buffer);
+                              send_message_to_clients(clients, clients[adv], actual, buffer);
 
                            }
                         }
