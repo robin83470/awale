@@ -33,28 +33,28 @@ int affichage(int l[12], char *buffer, size_t taille_buffer)
     int i;
 
 
-    // Camp adverse
+    
     offset += snprintf(buffer + offset, taille_buffer - offset, "Adversaire: ");
     for (i = 11; i >= 6 && offset < (int)taille_buffer; i--) {
         offset += snprintf(buffer + offset, taille_buffer - offset, "%3d ", l[i]);
     }
     offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
 
-    // Ligne de séparation
+    
     offset += snprintf(buffer + offset, taille_buffer - offset, "             ");
     for (i = 0; i < 6 && offset < (int)taille_buffer; i++) {
         offset += snprintf(buffer + offset, taille_buffer - offset, "----");
     }
     offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
 
-    // Votre camp
+    
     offset += snprintf(buffer + offset, taille_buffer - offset, "Vous:        ");
     for (i = 0; i < 6 && offset < (int)taille_buffer; i++) {
         offset += snprintf(buffer + offset, taille_buffer - offset, "%3d ", l[i]);
     }
     offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
 
-    // Ligne des indices de votre camp (1 à 6)
+    
     offset += snprintf(buffer + offset, taille_buffer - offset, "             ");
     for (i = 0; i < 6 && offset < (int)taille_buffer; i++) {
         offset += snprintf(buffer + offset, taille_buffer - offset, "%3d ", i + 1);
@@ -238,6 +238,10 @@ void find_game(Client* clients, int actual, int j)
    return;
 }
 
+
+//int affichage(int l[12], char *buffer, size_t taille_buffer)
+
+
 static void app(void)
 {
    SOCKET sock = init_connection();
@@ -333,6 +337,12 @@ static void app(void)
                   if(c == 0)
                   {
                      closesocket(clients[i].sock);
+                     if (clients[i].etat == 2 || clients[i].etat == 3)
+                     {
+                        int adv;
+                        adv = find_player(clients, actual, i);
+                        send_message_to_clients(clients, clients[adv], actual, buffer);  
+                     }
                      remove_client(clients, i, &actual);
                      strncpy(buffer, client.name, BUF_SIZE - 1);
                      strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
