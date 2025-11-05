@@ -758,8 +758,12 @@ void listerJoueurs(Client * client,int actual, char * buffer, size_t taille_buff
    // Camp adverse
    for (i = 0; i < actual; i++)
    {
-      offset += snprintf(buffer + offset, taille_buffer - offset, client[i].name);
-      offset += snprintf(buffer + offset, taille_buffer - offset, "/n");
+      if(client[i].etat == 0 || client[i].etat == 1)
+      {
+         offset += snprintf(buffer + offset, taille_buffer - offset, client[i].name);
+         offset += snprintf(buffer + offset, taille_buffer - offset, "/n");
+
+      }
    }
 
    return;
