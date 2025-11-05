@@ -434,7 +434,7 @@ static void app(void)
          clients[actual] = c;
          actual++;
          
-         strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour joueur, 2 pour être spectateur d'une partie\n\n");
+         strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour jouer, 2 pour être spectateur d'une partie\n\n");
          send_message_to_clients(clients, c, actual, buffer);      
 
          
