@@ -553,7 +553,7 @@ static void app(void)
                      // existing message handling (unchanged)...
                      //printf("%s\n", buffer);
                      nb = atoi(buffer);
-                     //printf("nb:%d\n", nb);
+                     printf("etat:%d\n", etat);
                      if (etat==0)
                      {
                         if(nb == 1)
@@ -983,22 +983,32 @@ static void app(void)
                            break;
                         }
 
-                        snprintf(buffer, BUF_SIZE, "\nVous avez reçu une demande de défi de %s.\nTapez 1 pour accepter, 0 pour refuser :\n", clients[i].name);
-                        send_message_to_clients(clients, clients[p], actual, buffer);
+                       
 
-                        snprintf(buffer, BUF_SIZE, "\nDemande de défi envoyée à %s. En attente de sa réponse...\n", clients[p].name);
-                        send_message_to_clients(clients, clients[i], actual, buffer);
-
-                        clients[i].etat = 10;  
-                        strncpy(clients[i].game.nameadv, target, BUF_SIZE - 1);
-                        clients[i].game.nameadv[BUF_SIZE - 1] = '\0';
-
-                        if (clients[p].etat == 0 || clients[p].etat == 1 || clients[p].etat == 5)
+                        else if (clients[p].etat == 0 || clients[p].etat == 1 || clients[p].etat == 5)
                         {
+                           snprintf(buffer, BUF_SIZE, "\nVous avez reçu une demande de défi de %s.\nTapez 1 pour accepter, 0 pour refuser :\n", clients[i].name);
+                           send_message_to_clients(clients, clients[p], actual, buffer);
+
+                           snprintf(buffer, BUF_SIZE, "\nDemande de défi envoyée à %s. En attente de sa réponse...\n", clients[p].name);
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+
+                           clients[i].etat = 10;  
+                           strncpy(clients[i].game.nameadv, target, BUF_SIZE - 1);
+                           clients[i].game.nameadv[BUF_SIZE - 1] = '\0';
                            printf("salut\n");
                            clients[p].etat = 11;
                            strncpy(clients[p].game.nameadv, clients[i].name, BUF_SIZE - 1);
                            clients[p].game.nameadv[BUF_SIZE - 1] = '\0';
+                        }
+
+                        else
+                        {
+                           strcpy(buffer, "\nJoueur introuvable ou non disponible pour une partie\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                           clients[i].etat = 0;
+                           strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour jouer, 2 pour être spectateur d'une partie, 3 defier un joueur en particulier\n\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
                         }
                      }
 
@@ -1010,6 +1020,7 @@ static void app(void)
 
                      else if (etat == 11)
                      {
+                        printf("salut\n");
                         int challenger_idx = find_player_name(clients, actual, clients[i].game.nameadv);
                         int resp = nb;
 
