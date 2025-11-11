@@ -434,7 +434,7 @@ static void app(void)
          clients[actual] = c;
          actual++;
          
-         strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour jouer, 2 pour être spectateur d'une partie\n\n");
+         strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour jouer, 2 pour être spectateur d'une partie, 3 defier un joueur en particulier\n\n");
          send_message_to_clients(clients, c, actual, buffer);      
 
          
@@ -493,6 +493,18 @@ static void app(void)
                            send_message_to_clients(clients, clients[i], actual, buffer);
                            strcpy(buffer, "\nEnvois le nom du joueur que tu veux observer ou 0 pour annuler\n");
                            send_message_to_clients(clients, clients[i], actual, buffer);  
+                        }
+                        else if (nb == 3)
+                        {  
+                           strcpy(buffer, "\n\nVoici la liste des joueurs disponibles:\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                           listerJoueurs(clients,actual,buffer,BUF_SIZE,i);
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                           strcpy(buffer, "\n\nIndique le nom de l'adversaire que tu souhaites défier: \n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+
+                           int repRead = read_client(clients[i].sock, buffer);
+                           defierJoueurSpe(buffer, clients,actual,i);
                         }
                         else
                         {
@@ -896,9 +908,10 @@ void listerJoueurs(Client * client,int actual, char * buffer, size_t taille_buff
       if((client[i].etat == 0 || client[i].etat == 1) && indiceCurrentJoueur != i)
       {
          offset += snprintf(buffer + offset, taille_buffer - offset, client[i].name);
-         offset += snprintf(buffer + offset, taille_buffer - offset, "/n");
+         offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
 
       }
+      
    }
 
    return;
