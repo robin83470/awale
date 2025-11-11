@@ -767,8 +767,6 @@ static void app(void)
                            clients[i].etat = 0;
                            strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour jouer, 2 pour être spectateur d'une partie, 3 defier un joueur en particulier\n\n");
                            send_message_to_clients(clients, clients[i], actual, buffer);
-                           strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour joueur, 2 pour être spectateur d'une partie\n\n");
-                           send_message_to_clients(clients, clients[i], actual, buffer);
                            clients[i].etat = 0;
                         }
                         else
@@ -997,6 +995,7 @@ static void app(void)
 
                         if (clients[p].etat == 0 || clients[p].etat == 1 || clients[p].etat == 5)
                         {
+                           printf("salut\n");
                            clients[p].etat = 11;
                            strncpy(clients[p].game.nameadv, clients[i].name, BUF_SIZE - 1);
                            clients[p].game.nameadv[BUF_SIZE - 1] = '\0';
