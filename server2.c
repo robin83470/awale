@@ -455,21 +455,99 @@ static void app(void)
                   /* client disconnected */
                   if(c == 0)
                   {
+                     /* Save information before removing/shifting the array */
+                     char leaver[BUF_SIZE];
+                     char adv_name[BUF_SIZE];
+                     char spec_name[BUF_SIZE];
+                     strncpy(leaver, client.name, BUF_SIZE - 1);
+                     leaver[BUF_SIZE - 1] = '\0';
+                     strncpy(adv_name, client.game.nameadv, BUF_SIZE - 1);
+                     adv_name[BUF_SIZE - 1] = '\0';
+                     strncpy(spec_name, client.namespec, BUF_SIZE - 1);
+                     spec_name[BUF_SIZE - 1] = '\0';
+
                      closesocket(clients[i].sock);
-                     if (clients[i].etat == 2 || clients[i].etat == 3)
+
+                     /* If the leaving client was in a game (player states), notify opponent and reset them */
+                     if (etat == 2 || etat == 3 || etat == 6 || etat == 7 || etat == 8)
                      {
-                        int adv;
-                        adv = find_player(clients, actual, i);
-                        strcpy(buffer, "\n\nVotre adversaire s'est deconnecté! Tu as gagné!\n\n");
-                        send_message_to_clients(clients, clients[adv], actual, buffer);  
+                        int adv = find_player(clients, actual, i);
+                        if (adv != -1)
+                        {
+                           snprintf(buffer, BUF_SIZE, "\n\nVotre adversaire %s s'est deconnecté! La partie est terminée. Tu reviens au menu principal.\n\n", leaver);
+                           send_message_to_clients(clients, clients[adv], actual, buffer);
+
+                           /* reset opponent state and game */
+                           clients[adv].etat = 0;
+                           for (int z = 0; z < 12; z++) clients[adv].game.l[z] = 0;
+                           clients[adv].game.score = 0;
+                           clients[adv].game.spec = 0;
+                        }
+
+                        /* Notify spectators who were observing this player */
+                        for (int k = 0; k < actual; k++)
+                        {
+                           if (clients[k].etat == 4 && strcmp(clients[k].namespec, leaver) == 0)
+                           {
+                              snprintf(buffer, BUF_SIZE, "\nLe joueur %s que tu observais s'est deconnecté. Observation terminée. Tu reviens au menu principal.\n", leaver);
+                              send_message_to_clients(clients, clients[k], actual, buffer);
+                              clients[k].etat = 0;
+                              clients[k].namespec[0] = '\0';
+                           }
+                        }
                      }
+
+                     /* If leaving client was a challenger waiting for a response (etat 10), notify the target */
+                     if (etat == 10)
+                     {
+                        if (adv_name[0] != '\0')
+                        {
+                           int target = find_player_name(clients, actual, adv_name);
+                           if (target != -1)
+                           {
+                              snprintf(buffer, BUF_SIZE, "\nLe joueur %s qui t'a défié s'est déconnecté. La demande est annulée.\n", leaver);
+                              send_message_to_clients(clients, clients[target], actual, buffer);
+                              clients[target].etat = 0;
+                           }
+                        }
+                     }
+
+                     /* If leaving client was being asked to respond to a challenge (etat 11), notify challenger */
+                     if (etat == 11)
+                     {
+                        if (adv_name[0] != '\0')
+                        {
+                           int challenger = find_player_name(clients, actual, adv_name);
+                           if (challenger != -1)
+                           {
+                              snprintf(buffer, BUF_SIZE, "\nLe joueur %s à qui tu as envoyé un défi s'est déconnecté. La demande est annulée.\n", leaver);
+                              send_message_to_clients(clients, clients[challenger], actual, buffer);
+                              clients[challenger].etat = 0;
+                           }
+                        }
+                     }
+
+                     /* If leaving client was a spectator (etat 4 or 12), and they were marked as a spectator on a player's game, clear that player's spec flag */
+                     if (etat == 4 || etat == 12)
+                     {
+                        if (spec_name[0] != '\0')
+                        {
+                           int p = find_player_name(clients, actual, spec_name);
+                           if (p != -1)
+                              clients[p].game.spec = 0;
+                        }
+                     }
+
+                     /* Finally remove the client from the array */
                      remove_client(clients, i, &actual);
-                     strncpy(buffer, client.name, BUF_SIZE - 1);
-                     strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
+
+                     /* Log and continue */
+                     snprintf(buffer, BUF_SIZE, "%s disconnected !", leaver);
                      printf("%s\n", buffer);
                   }
                   else
                   {
+                     // existing message handling (unchanged)...
                      //printf("%s\n", buffer);
                      nb = atoi(buffer);
                      //printf("%d\n", etat);
