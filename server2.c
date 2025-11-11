@@ -662,7 +662,7 @@ static void app(void)
                         }
                         else if(strcmp("c", buffer)==0)
                         {
-                           clients[i].etat = 9;
+                           clients[i].etat = 12;
                            strcpy(buffer, "\n\nMessage à envoyer?\n\n");
                            send_message_to_clients(clients, clients[i], actual, buffer);
                         }
@@ -674,7 +674,7 @@ static void app(void)
                      }
 
 
-                     else if (etat==9)
+                     else if (etat==12)
                      {
                         if (strcmp("0", buffer) == 0)
                         {
@@ -788,7 +788,12 @@ static void app(void)
                               clients[i].etat = 4;
                               strncpy(clients[i].namespec, target, BUF_SIZE - 1);
                               clients[p].game.spec = 1;
+                              int adv = find_player(clients, actual, p);
                               snprintf(buffer, BUF_SIZE, "\nTu observes maintenant %s. Envois c pour chatter avec les joueurs observés ou 0 pour quitter l'observation\n", clients[p].name);
+                              send_message_to_clients(clients, clients[i], actual, buffer);
+                              snprintf(buffer, BUF_SIZE, "\nVoici l'état de la partie, score de %s: %d, score de %s: %d\n", clients[p].name, clients[p].game.score, clients[adv].name, clients[p].game.score); 
+                              send_message_to_clients(clients, clients[i], actual, buffer);
+                              affichage(clients[p].game.l, buffer, BUF_SIZE);
                               send_message_to_clients(clients, clients[i], actual, buffer);
                            }
                         }
@@ -822,39 +827,6 @@ static void app(void)
                         }
                      }
 
-                     else if (etat==12)
-                     {
-                        /* spectator chat: forward message to both players involved in the observed game,
-                           then return spectator to etat 4 so they're not blocked.
-                        */
-                        if (strcmp(buffer, "0") == 0 || nb == 0)
-                        {
-                           clients[i].etat = 4;
-                           strcpy(buffer, "\nObservation annulée. Envois c pour chatter ou 0 pour quitter l'observation\n");
-                           send_message_to_clients(clients, clients[i], actual, buffer);
-                        }
-                        else
-                        {
-                           int p = find_player_name(clients, actual, clients[i].namespec);
-                           if (p != -1)
-                           {
-                              /* send to observed player */
-                              char message[BUF_SIZE];
-                              message[0] = '\0';
-                              snprintf(message, BUF_SIZE, "Spectateur %s : %s", clients[i].name, buffer);
-                              send_message_to_clients(clients, clients[p], actual, message);
-
-                              /* send to opponent if exists */
-                              int adv = find_player(clients, actual, p);
-                              if (adv != -1)
-                                 send_message_to_clients(clients, clients[adv], actual, message);
-                           }
-                           /* go back to spectator main state */
-                           clients[i].etat = 4;
-                           strcpy(buffer, "\nMessage envoyé. Envois c pour chatter ou 0 pour quitter l'observation\n");
-                           send_message_to_clients(clients, clients[i], actual, buffer);
-                        }
-                     }
 
                      else if (etat==6)
                      {
@@ -990,7 +962,7 @@ static void app(void)
                         // size_t len = strlen(target);
                         // while (len > 0 && (target[len - 1] == ' ' || target[len - 1] == '\t' || target[len - 1] == '\r' || target[len - 1] == '\n'))
                         //    target[--len] = '\0';
-                        //len == 0 || 
+                        // len == 0 || 
 
                         if (strcmp(target, "0") == 0)
                         {
