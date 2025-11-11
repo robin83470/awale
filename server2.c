@@ -788,7 +788,12 @@ static void app(void)
                               clients[i].etat = 4;
                               strncpy(clients[i].namespec, target, BUF_SIZE - 1);
                               clients[p].game.spec = 1;
+                              int adv = find_player(clients, actual, p);
                               snprintf(buffer, BUF_SIZE, "\nTu observes maintenant %s. Envois c pour chatter avec les joueurs observés ou 0 pour quitter l'observation\n", clients[p].name);
+                              send_message_to_clients(clients, clients[i], actual, buffer);
+                              snprintf(buffer, BUF_SIZE, "\nVoici l'état de la partie, score de %s: %d, score de %s: %d\n", clients[p].name, clients[p].game.score, clients[adv].name, clients[p].game.score); 
+                              send_message_to_clients(clients, clients[i], actual, buffer);
+                              affichage(clients[p].game.l, buffer, BUF_SIZE);
                               send_message_to_clients(clients, clients[i], actual, buffer);
                            }
                         }
