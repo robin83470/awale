@@ -787,7 +787,6 @@ static void app(void)
                               /* become spectator */
                               clients[i].etat = 4;
                               strncpy(clients[i].namespec, target, BUF_SIZE - 1);
-                              clients[i].namespec[BUF_SIZE - 1] = '\0';
                               clients[p].game.spec = 1;
                               snprintf(buffer, BUF_SIZE, "\nTu observes maintenant %s. Envois c pour chatter avec les joueurs observés ou 0 pour quitter l'observation\n", clients[p].name);
                               send_message_to_clients(clients, clients[i], actual, buffer);
@@ -983,16 +982,17 @@ static void app(void)
                         strncpy(target, buffer, BUF_SIZE - 1);
                         target[BUF_SIZE - 1] = '\0';
 
-                        /* Trim du pseudo */
-                        char *start = target;
-                        while (*start == ' ' || *start == '\t' || *start == '\r' || *start == '\n') start++;
-                        if (start != target) memmove(target, start, strlen(start) + 1);
 
-                        size_t len = strlen(target);
-                        while (len > 0 && (target[len - 1] == ' ' || target[len - 1] == '\t' || target[len - 1] == '\r' || target[len - 1] == '\n'))
-                           target[--len] = '\0';
+                        // char *start = target;
+                        // while (*start == ' ' || *start == '\t' || *start == '\r' || *start == '\n') start++;
+                        // if (start != target) memmove(target, start, strlen(start) + 1);
 
-                        if (len == 0 || strcmp(target, "0") == 0)
+                        // size_t len = strlen(target);
+                        // while (len > 0 && (target[len - 1] == ' ' || target[len - 1] == '\t' || target[len - 1] == '\r' || target[len - 1] == '\n'))
+                        //    target[--len] = '\0';
+                        //len == 0 || 
+
+                        if (strcmp(target, "0") == 0)
                         {
                            strcpy(buffer, "\nDéfi annulé.\n");
                            send_message_to_clients(clients, clients[i], actual, buffer);
@@ -1013,20 +1013,16 @@ static void app(void)
                            break;
                         }
 
-                        /* Envoie la demande de défi au joueur ciblé */
                         snprintf(buffer, BUF_SIZE, "\nVous avez reçu une demande de défi de %s.\nTapez 1 pour accepter, 0 pour refuser :\n", clients[i].name);
                         send_message_to_clients(clients, clients[p], actual, buffer);
 
-                        /* Informe le challenger que la demande est envoyée */
                         snprintf(buffer, BUF_SIZE, "\nDemande de défi envoyée à %s. En attente de sa réponse...\n", clients[p].name);
                         send_message_to_clients(clients, clients[i], actual, buffer);
 
-                        /* Change l'état en attente de réponse */
-                        clients[i].etat = 10;  // État 10: en attente de réponse au défi
+                        clients[i].etat = 10;  
                         strncpy(clients[i].game.nameadv, target, BUF_SIZE - 1);
                         clients[i].game.nameadv[BUF_SIZE - 1] = '\0';
 
-                        /* État du joueur ciblé: en attente de réponse (état 11) */
                         if (clients[p].etat == 0 || clients[p].etat == 1 || clients[p].etat == 5)
                         {
                            clients[p].etat = 11;
@@ -1035,15 +1031,12 @@ static void app(void)
                         }
                      }
 
-                     /* État 10: Challenger en attente de réponse */
                      else if (etat == 10)
                      {
-                        /* Ne rien faire, le challenger attend juste */
                         strcpy(buffer, "\nEn attente de réponse...\n");
                         send_message_to_clients(clients, clients[i], actual, buffer);
                      }
 
-                     /* État 11: Joueur en attente de répondre à un défi */
                      else if (etat == 11)
                      {
                         int challenger_idx = find_player_name(clients, actual, clients[i].game.nameadv);
@@ -1051,10 +1044,8 @@ static void app(void)
 
                         if (resp == 1)
                         {
-                           /* Acceptation du défi */
                            if (challenger_idx != -1)
                            {
-                              /* Initialise la partie */
                               clients[challenger_idx].etat = 2;
                               clients[i].etat = 3;
 
@@ -1066,14 +1057,12 @@ static void app(void)
                               clients[challenger_idx].game.score = 0;
                               clients[i].game.score = 0;
 
-                              /* Messages utilisateurs */
                               snprintf(buffer, BUF_SIZE, "\n\nPartie trouvée, tu commences!\n\nEnvois j pour jouer ou c pour chatter\n\n");
                               send_message_to_clients(clients, clients[challenger_idx], actual, buffer);
 
                               snprintf(buffer, BUF_SIZE, "\n\nPartie trouvée, ton adversaire commence!\n\nEnvois c pour chatter\n");
                               send_message_to_clients(clients, clients[i], actual, buffer);
 
-                              /* Envoie affichage du plateau aux deux joueurs */
                               affichage(clients[challenger_idx].game.l, buffer, BUF_SIZE);
                               send_message_to_clients(clients, clients[challenger_idx], actual, buffer);
                               send_message_to_clients(clients, clients[i], actual, buffer);
@@ -1081,7 +1070,6 @@ static void app(void)
                         }
                         else
                         {
-                           /* Refus du défi */
                            if (challenger_idx != -1)
                            {
                               snprintf(buffer, BUF_SIZE, "\n%s a refusé votre défi.\n", clients[i].name);
