@@ -1201,7 +1201,7 @@ void listerJoueurs(Client * client, int actual, char * buffer, size_t taille_buf
    for (i = 0; i < actual; i++)
    {
       /* Affiche seulement les joueurs en attente (etat == 1) et pas le joueur lui-même */
-      if ((client[i].etat == 1 || client[i].etat == 0) && indiceCurrentJoueur != i)
+      if ((client[i].etat == 1 || client[i].etat == 0 || client[i].etat == 4) && indiceCurrentJoueur != i)
       {
          offset += snprintf(buffer + offset, taille_buffer - offset, "  - %s\n", client[i].name);
       }
