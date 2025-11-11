@@ -437,7 +437,7 @@ static void app(void)
          clients[actual] = c;
          actual++;
          
-         strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour jouer, 2 pour être spectateur d'une partie\n\n");
+         strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour jouer, 2 pour être spectateur d'une partie, 3 defier un joueur en particulier\n\n");
          send_message_to_clients(clients, c, actual, buffer);      
 
          
@@ -458,21 +458,99 @@ static void app(void)
                   /* client disconnected */
                   if(c == 0)
                   {
+                     /* Save information before removing/shifting the array */
+                     char leaver[BUF_SIZE];
+                     char adv_name[BUF_SIZE];
+                     char spec_name[BUF_SIZE];
+                     strncpy(leaver, client.name, BUF_SIZE - 1);
+                     leaver[BUF_SIZE - 1] = '\0';
+                     strncpy(adv_name, client.game.nameadv, BUF_SIZE - 1);
+                     adv_name[BUF_SIZE - 1] = '\0';
+                     strncpy(spec_name, client.namespec, BUF_SIZE - 1);
+                     spec_name[BUF_SIZE - 1] = '\0';
+
                      closesocket(clients[i].sock);
-                     if (clients[i].etat == 2 || clients[i].etat == 3)
+
+                     /* If the leaving client was in a game (player states), notify opponent and reset them */
+                     if (etat == 2 || etat == 3 || etat == 6 || etat == 7 || etat == 8)
                      {
-                        int adv;
-                        adv = find_player(clients, actual, i);
-                        strcpy(buffer, "\n\nVotre adversaire s'est deconnecté! Tu as gagné!\n\n");
-                        send_message_to_clients(clients, clients[adv], actual, buffer);  
+                        int adv = find_player(clients, actual, i);
+                        if (adv != -1)
+                        {
+                           snprintf(buffer, BUF_SIZE, "\n\nVotre adversaire %s s'est deconnecté! La partie est terminée. Tu reviens au menu principal.\n\n", leaver);
+                           send_message_to_clients(clients, clients[adv], actual, buffer);
+
+                           /* reset opponent state and game */
+                           clients[adv].etat = 0;
+                           for (int z = 0; z < 12; z++) clients[adv].game.l[z] = 0;
+                           clients[adv].game.score = 0;
+                           clients[adv].game.spec = 0;
+                        }
+
+                        /* Notify spectators who were observing this player */
+                        for (int k = 0; k < actual; k++)
+                        {
+                           if (clients[k].etat == 4 && strcmp(clients[k].namespec, leaver) == 0)
+                           {
+                              snprintf(buffer, BUF_SIZE, "\nLe joueur %s que tu observais s'est deconnecté. Observation terminée. Tu reviens au menu principal.\n", leaver);
+                              send_message_to_clients(clients, clients[k], actual, buffer);
+                              clients[k].etat = 0;
+                              clients[k].namespec[0] = '\0';
+                           }
+                        }
                      }
+
+                     /* If leaving client was a challenger waiting for a response (etat 10), notify the target */
+                     if (etat == 10)
+                     {
+                        if (adv_name[0] != '\0')
+                        {
+                           int target = find_player_name(clients, actual, adv_name);
+                           if (target != -1)
+                           {
+                              snprintf(buffer, BUF_SIZE, "\nLe joueur %s qui t'a défié s'est déconnecté. La demande est annulée.\n", leaver);
+                              send_message_to_clients(clients, clients[target], actual, buffer);
+                              clients[target].etat = 0;
+                           }
+                        }
+                     }
+
+                     /* If leaving client was being asked to respond to a challenge (etat 11), notify challenger */
+                     if (etat == 11)
+                     {
+                        if (adv_name[0] != '\0')
+                        {
+                           int challenger = find_player_name(clients, actual, adv_name);
+                           if (challenger != -1)
+                           {
+                              snprintf(buffer, BUF_SIZE, "\nLe joueur %s à qui tu as envoyé un défi s'est déconnecté. La demande est annulée.\n", leaver);
+                              send_message_to_clients(clients, clients[challenger], actual, buffer);
+                              clients[challenger].etat = 0;
+                           }
+                        }
+                     }
+
+                     /* If leaving client was a spectator (etat 4 or 12), and they were marked as a spectator on a player's game, clear that player's spec flag */
+                     if (etat == 4 || etat == 12)
+                     {
+                        if (spec_name[0] != '\0')
+                        {
+                           int p = find_player_name(clients, actual, spec_name);
+                           if (p != -1)
+                              clients[p].game.spec = 0;
+                        }
+                     }
+
+                     /* Finally remove the client from the array */
                      remove_client(clients, i, &actual);
-                     strncpy(buffer, client.name, BUF_SIZE - 1);
-                     strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
-                     send_message_to_all_clients(clients, client, actual, buffer, 1);
+
+                     /* Log and continue */
+                     snprintf(buffer, BUF_SIZE, "%s disconnected !", leaver);
+                     printf("%s\n", buffer);
                   }
                   else
                   {
+                     // existing message handling (unchanged)...
                      //printf("%s\n", buffer);
                      nb = atoi(buffer);
                      //printf("nb:%d\n", nb);
@@ -497,6 +575,21 @@ static void app(void)
                            strcpy(buffer, "\nEnvois le nom du joueur que tu veux observer ou 0 pour annuler\n");
                            send_message_to_clients(clients, clients[i], actual, buffer);  
                         }
+                        else if (nb == 3)
+                        {
+                           /* Liste les joueurs disponibles */
+                           strcpy(buffer, "\n\nVoici la liste des joueurs disponibles:\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                           listerJoueurs(clients, actual, buffer, BUF_SIZE, i);
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+
+                           /* Demande le pseudo de l'adversaire */
+                           strcpy(buffer, "\n\nIndique le nom de l'adversaire que tu souhaites défier (ou 0 pour annuler): \n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+
+                           /* Change l'état en attente de défi */
+                           clients[i].etat = 9;  // État 9: en attente du nom du joueur à défier
+                        }
                         else
                         {
                            strcpy(buffer, "\nMessage non compris\n");
@@ -518,7 +611,6 @@ static void app(void)
                            send_message_to_clients(clients, clients[i], actual, buffer); 
                         }
                      }
-
 
                      else if (etat==2)
                      {
@@ -654,16 +746,26 @@ static void app(void)
                      
                      else if (etat==5)
                      {
-                        int p = find_player_name(clients, actual, buffer);
-                        if (strcmp("0", buffer) == 0)
+                        /* Etat 5: demande du nom du joueur à observer
+                           - si envoie "0" on annule
+                           - sinon on tente de trouver et basculer en spectateur (etat 4)
+                        */
+                        /* trim input */
+                        char target[BUF_SIZE];
+                        strncpy(target, buffer, BUF_SIZE - 1);
+                        target[BUF_SIZE - 1] = '\0';
+                        char *start = target;
+                        while (*start == ' ' || *start == '\t' || *start == '\r' || *start == '\n') start++;
+                        if (start != target) memmove(target, start, strlen(start) + 1);
+                        size_t len = strlen(target);
+                        while (len > 0 && (target[len - 1] == ' ' || target[len - 1] == '\t' || target[len - 1] == '\r' || target[len - 1] == '\n'))
+                           target[--len] = '\0';
+
+                        if (len == 0 || strcmp(target, "0") == 0)
                         {
-                           strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour joueur, 2 pour être spectateur d'une partie\n\n");
-                           send_message_to_clients(clients, clients[i], actual, buffer);
-                           clients[i].etat = 0; 
-                        }
-                        else if (p==-1 || (clients[p].etat!=2 && clients[p].etat!=3 && clients[p].etat!=6 && clients[p].etat!=7 && clients[p].etat!=8))
-                        {
-                           strcpy(buffer, "\nJoueur introuvable ou plus en partie\n");
+                           /* cancel spectate request */
+                           clients[i].etat = 0;
+                           strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour jouer, 2 pour être spectateur d'une partie, 3 defier un joueur en particulier\n\n");
                            send_message_to_clients(clients, clients[i], actual, buffer);
                            strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour joueur, 2 pour être spectateur d'une partie\n\n");
                            send_message_to_clients(clients, clients[i], actual, buffer);
@@ -671,18 +773,88 @@ static void app(void)
                         }
                         else
                         {
-                           int adv = find_player(clients, actual, p);
-                           clients[i].etat = 4;
-                           strcpy(clients[i].namespec, buffer);
-                           clients[p].game.spec = 1;
-                           strcpy(buffer, "\nVoilà la partie: \n");
-                           send_message_to_clients(clients, clients[i], actual, buffer);
-                           affichage(clients[p].game.l, buffer, BUF_SIZE);
-                           send_message_to_clients(clients, clients[i], actual, buffer);
-                           snprintf(buffer, BUF_SIZE, "\nScore de %s: %d\n Score de %s: %d\n(0 pour annuler l'observation et c pour chatter)\n", clients[p].name, clients[p].game.score, clients[adv].name, clients[adv].game.score);
+                           int p = find_player_name(clients, actual, target);
+                           if (p == -1 || (clients[p].etat != 2 && clients[p].etat != 3 && clients[p].etat != 6 && clients[p].etat != 7 && clients[p].etat != 8))
+                           {
+                              strcpy(buffer, "\nJoueur introuvable ou plus en partie\n");
+                              send_message_to_clients(clients, clients[i], actual, buffer);
+                              /* stay in etat 5 so the user can retry or cancel */
+                              strcpy(buffer, "\nEnvois le nom du joueur que tu veux observer ou 0 pour annuler\n");
+                              send_message_to_clients(clients, clients[i], actual, buffer);
+                           }
+                           else
+                           {
+                              /* become spectator */
+                              clients[i].etat = 4;
+                              strncpy(clients[i].namespec, target, BUF_SIZE - 1);
+                              clients[i].namespec[BUF_SIZE - 1] = '\0';
+                              clients[p].game.spec = 1;
+                              snprintf(buffer, BUF_SIZE, "\nTu observes maintenant %s. Envois c pour chatter avec les joueurs observés ou 0 pour quitter l'observation\n", clients[p].name);
+                              send_message_to_clients(clients, clients[i], actual, buffer);
+                           }
+                        }
+                     }
+
+                     else if (etat==4)
+                     {
+                        /* Spectator main state:
+                           - "0" or numeric 0 : cancel spectating
+                           - "c" : enter spectator chat prompt (state 12)
+                           - otherwise : help message
+                        */
+                        if (strcmp(buffer, "0") == 0 || nb == 0)
+                        {
+                           int p = find_player_name(clients, actual, clients[i].namespec);
+                           if (p != -1) clients[p].game.spec = 0;
+                           clients[i].etat = 0;
+                           strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour jouer, 2 pour être spectateur d'une partie, 3 defier un joueur en particulier\n\n");
                            send_message_to_clients(clients, clients[i], actual, buffer);
                         }
-                        
+                        else if (strcmp(buffer, "c") == 0)
+                        {
+                           clients[i].etat = 12; /* spectator chat prompt */
+                           strcpy(buffer, "\nMessage à envoyer en tant que spectateur ? (envoie 0 pour annuler)\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                        }
+                        else
+                        {
+                           strcpy(buffer, "\nCommande non comprise. Envois c pour chatter ou 0 pour quitter l'observation\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                        }
+                     }
+
+                     else if (etat==12)
+                     {
+                        /* spectator chat: forward message to both players involved in the observed game,
+                           then return spectator to etat 4 so they're not blocked.
+                        */
+                        if (strcmp(buffer, "0") == 0 || nb == 0)
+                        {
+                           clients[i].etat = 4;
+                           strcpy(buffer, "\nObservation annulée. Envois c pour chatter ou 0 pour quitter l'observation\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                        }
+                        else
+                        {
+                           int p = find_player_name(clients, actual, clients[i].namespec);
+                           if (p != -1)
+                           {
+                              /* send to observed player */
+                              char message[BUF_SIZE];
+                              message[0] = '\0';
+                              snprintf(message, BUF_SIZE, "Spectateur %s : %s", clients[i].name, buffer);
+                              send_message_to_clients(clients, clients[p], actual, message);
+
+                              /* send to opponent if exists */
+                              int adv = find_player(clients, actual, p);
+                              if (adv != -1)
+                                 send_message_to_clients(clients, clients[adv], actual, message);
+                           }
+                           /* go back to spectator main state */
+                           clients[i].etat = 4;
+                           strcpy(buffer, "\nMessage envoyé. Envois c pour chatter ou 0 pour quitter l'observation\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                        }
                      }
 
                      else if (etat==6)
@@ -701,7 +873,7 @@ static void app(void)
                                 
                               else if (!coup_valide(clients[i].game.l, choix ))
                               {
-                                 strcpy(buffer, "\nCe coup affame l’adversaire, choisissez une autre case\n");
+                                 strcpy(buffer, "\nCe coup affame l'adversaire, choisissez une autre case\n");
                                  send_message_to_clients(clients, clients[i], actual, buffer);
                               }
                                 
@@ -800,6 +972,134 @@ static void app(void)
 
                         
                         
+                     }
+
+                     /* État 9: Attente du nom du joueur à défier */
+                     else if (etat == 9)
+                     {
+                        char target[BUF_SIZE];
+                        int p;
+
+                        strncpy(target, buffer, BUF_SIZE - 1);
+                        target[BUF_SIZE - 1] = '\0';
+
+                        /* Trim du pseudo */
+                        char *start = target;
+                        while (*start == ' ' || *start == '\t' || *start == '\r' || *start == '\n') start++;
+                        if (start != target) memmove(target, start, strlen(start) + 1);
+
+                        size_t len = strlen(target);
+                        while (len > 0 && (target[len - 1] == ' ' || target[len - 1] == '\t' || target[len - 1] == '\r' || target[len - 1] == '\n'))
+                           target[--len] = '\0';
+
+                        if (len == 0 || strcmp(target, "0") == 0)
+                        {
+                           strcpy(buffer, "\nDéfi annulé.\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                           clients[i].etat = 0;
+                           strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour jouer, 2 pour être spectateur d'une partie, 3 defier un joueur en particulier\n\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                           break;
+                        }
+
+                        p = find_player_name(clients, actual, target);
+                        if (p == -1 || (clients[p].etat != 0 && clients[p].etat != 1 && clients[p].etat != 5))
+                        {
+                           strcpy(buffer, "\nJoueur introuvable ou non disponible pour une partie\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                           clients[i].etat = 0;
+                           strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour jouer, 2 pour être spectateur d'une partie, 3 defier un joueur en particulier\n\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                           break;
+                        }
+
+                        /* Envoie la demande de défi au joueur ciblé */
+                        snprintf(buffer, BUF_SIZE, "\nVous avez reçu une demande de défi de %s.\nTapez 1 pour accepter, 0 pour refuser :\n", clients[i].name);
+                        send_message_to_clients(clients, clients[p], actual, buffer);
+
+                        /* Informe le challenger que la demande est envoyée */
+                        snprintf(buffer, BUF_SIZE, "\nDemande de défi envoyée à %s. En attente de sa réponse...\n", clients[p].name);
+                        send_message_to_clients(clients, clients[i], actual, buffer);
+
+                        /* Change l'état en attente de réponse */
+                        clients[i].etat = 10;  // État 10: en attente de réponse au défi
+                        strncpy(clients[i].game.nameadv, target, BUF_SIZE - 1);
+                        clients[i].game.nameadv[BUF_SIZE - 1] = '\0';
+
+                        /* État du joueur ciblé: en attente de réponse (état 11) */
+                        if (clients[p].etat == 0 || clients[p].etat == 1 || clients[p].etat == 5)
+                        {
+                           clients[p].etat = 11;
+                           strncpy(clients[p].game.nameadv, clients[i].name, BUF_SIZE - 1);
+                           clients[p].game.nameadv[BUF_SIZE - 1] = '\0';
+                        }
+                     }
+
+                     /* État 10: Challenger en attente de réponse */
+                     else if (etat == 10)
+                     {
+                        /* Ne rien faire, le challenger attend juste */
+                        strcpy(buffer, "\nEn attente de réponse...\n");
+                        send_message_to_clients(clients, clients[i], actual, buffer);
+                     }
+
+                     /* État 11: Joueur en attente de répondre à un défi */
+                     else if (etat == 11)
+                     {
+                        int challenger_idx = find_player_name(clients, actual, clients[i].game.nameadv);
+                        int resp = nb;
+
+                        if (resp == 1)
+                        {
+                           /* Acceptation du défi */
+                           if (challenger_idx != -1)
+                           {
+                              /* Initialise la partie */
+                              clients[challenger_idx].etat = 2;
+                              clients[i].etat = 3;
+
+                              for (int z = 0; z < 12; z++)
+                              {
+                                 clients[challenger_idx].game.l[z] = 4;
+                                 clients[i].game.l[z] = 4;
+                              }
+                              clients[challenger_idx].game.score = 0;
+                              clients[i].game.score = 0;
+
+                              /* Messages utilisateurs */
+                              snprintf(buffer, BUF_SIZE, "\n\nPartie trouvée, tu commences!\n\nEnvois j pour jouer ou c pour chatter\n\n");
+                              send_message_to_clients(clients, clients[challenger_idx], actual, buffer);
+
+                              snprintf(buffer, BUF_SIZE, "\n\nPartie trouvée, ton adversaire commence!\n\nEnvois c pour chatter\n");
+                              send_message_to_clients(clients, clients[i], actual, buffer);
+
+                              /* Envoie affichage du plateau aux deux joueurs */
+                              affichage(clients[challenger_idx].game.l, buffer, BUF_SIZE);
+                              send_message_to_clients(clients, clients[challenger_idx], actual, buffer);
+                              send_message_to_clients(clients, clients[i], actual, buffer);
+                           }
+                        }
+                        else
+                        {
+                           /* Refus du défi */
+                           if (challenger_idx != -1)
+                           {
+                              snprintf(buffer, BUF_SIZE, "\n%s a refusé votre défi.\n", clients[i].name);
+                              send_message_to_clients(clients, clients[challenger_idx], actual, buffer);
+                              clients[challenger_idx].etat = 0;
+                           }
+                           strcpy(buffer, "\nVous avez refusé le défi.\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                           clients[i].etat = 0;
+
+                           strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour jouer, 2 pour être spectateur d'une partie, 3 defier un joueur en particulier\n\n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+                           if (challenger_idx != -1)
+                           {
+                              strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour jouer, 2 pour être spectateur d'une partie, 3 defier un joueur en particulier\n\n");
+                              send_message_to_clients(clients, clients[challenger_idx], actual, buffer);
+                           }
+                        }
                      }
                      
                   }
@@ -1013,21 +1313,25 @@ static void write_client(SOCKET sock, const char *buffer)
    }
 }
 
-void listerJoueurs(Client * client,int actual, char * buffer, size_t taille_buffer, int indiceCurrentJoueur)
+void listerJoueurs(Client * client, int actual, char * buffer, size_t taille_buffer, int indiceCurrentJoueur)
 {
    int offset = 0;
    int i;
 
-
-   // Camp adverse
+   /* Liste les joueurs disponibles pour s'affronter */
    for (i = 0; i < actual; i++)
    {
-      if((client[i].etat == 0 || client[i].etat == 1) && indiceCurrentJoueur != i)
+      /* Affiche seulement les joueurs en attente (etat == 1) et pas le joueur lui-même */
+      if ((client[i].etat == 1 || client[i].etat == 0 || client[i].etat == 4) && indiceCurrentJoueur != i)
       {
-         offset += snprintf(buffer + offset, taille_buffer - offset, client[i].name);
-         offset += snprintf(buffer + offset, taille_buffer - offset, "/n");
-
+         offset += snprintf(buffer + offset, taille_buffer - offset, "  - %s\n", client[i].name);
       }
+   }
+
+   /* Message si aucun joueur disponible */
+   if (offset == 0)
+   {
+      snprintf(buffer, taille_buffer, "Aucun joueur disponible pour s'affronter.\n");
    }
 
    return;
@@ -1036,7 +1340,30 @@ void listerJoueurs(Client * client,int actual, char * buffer, size_t taille_buff
 void defierJoueurSpe(char * target, Client * client, int actual, int indiceCurrentJoueur)
 {
    char buffer[BUF_SIZE];
-   int iTargetPlayer = find_player_name(client, actual, target);
+   char tgt[BUF_SIZE];
+
+   /* Copie et trim du pseudo cible (enlève espaces et retours chariot) */
+   strncpy(tgt, target, BUF_SIZE - 1);
+   tgt[BUF_SIZE - 1] = '\0';
+
+   /* trim leading */
+   char *start = tgt;
+   while (*start == ' ' || *start == '\t' || *start == '\r' || *start == '\n') start++;
+   if (start != tgt) memmove(tgt, start, strlen(start) + 1);
+
+   /* trim trailing */
+   size_t len = strlen(tgt);
+   while (len > 0 && (tgt[len - 1] == ' ' || tgt[len - 1] == '\t' || tgt[len - 1] == '\r' || tgt[len - 1] == '\n'))
+      tgt[--len] = '\0';
+
+   if (len == 0)
+   {
+      snprintf(buffer, BUF_SIZE, "\nPseudo invalide.\n");
+      send_message_to_clients(client, client[indiceCurrentJoueur], actual, buffer);
+      return;
+   }
+
+   int iTargetPlayer = find_player_name(client, actual, tgt);
 
    if (iTargetPlayer == -1 || iTargetPlayer == indiceCurrentJoueur)
    {
@@ -1045,19 +1372,21 @@ void defierJoueurSpe(char * target, Client * client, int actual, int indiceCurre
       return;
    }
 
-   if (client[iTargetPlayer].etat != 1)
+   if (client[iTargetPlayer].etat != 0 && client[iTargetPlayer].etat != 1)
    {
-      snprintf(buffer, BUF_SIZE, "\nLe joueur %s n'est pas disponible pour une partie\n", target);
+      snprintf(buffer, BUF_SIZE, "\nLe joueur %s n'est pas disponible pour une partie\n", tgt);
       send_message_to_clients(client, client[indiceCurrentJoueur], actual, buffer);
       return;
    }
 
+   /* Met en place la partie : iTargetPlayer commencera (etat 2), challenger devient etat 3 */
+   client[iTargetPlayer].etat = 2;
+   client[indiceCurrentJoueur].etat = 3;
 
-   client[iTargetPlayer].etat = 2;                        
-   client[indiceCurrentJoueur].etat = 3;        
-
-   strcpy(client[iTargetPlayer].game.nameadv, client[indiceCurrentJoueur].name);
-   strcpy(client[indiceCurrentJoueur].game.nameadv, client[iTargetPlayer].name);
+   strncpy(client[iTargetPlayer].game.nameadv, client[indiceCurrentJoueur].name, BUF_SIZE - 1);
+   client[iTargetPlayer].game.nameadv[BUF_SIZE - 1] = '\0';
+   strncpy(client[indiceCurrentJoueur].game.nameadv, client[iTargetPlayer].name, BUF_SIZE - 1);
+   client[indiceCurrentJoueur].game.nameadv[BUF_SIZE - 1] = '\0';
 
    for (int z = 0; z < 12; z++)
    {
@@ -1067,12 +1396,14 @@ void defierJoueurSpe(char * target, Client * client, int actual, int indiceCurre
    client[iTargetPlayer].game.score = 0;
    client[indiceCurrentJoueur].game.score = 0;
 
+   /* Messages utilisateurs */
    snprintf(buffer, BUF_SIZE, "\n\nPartie trouvée, tu commences!\n\nEnvois j pour jouer ou c pour chatter\n\n");
    send_message_to_clients(client, client[iTargetPlayer], actual, buffer);
 
    snprintf(buffer, BUF_SIZE, "\n\nPartie trouvée, ton adversaire commence!\n\nEnvois c pour chatter\n");
    send_message_to_clients(client, client[indiceCurrentJoueur], actual, buffer);
 
+   /* Envoie affichage du plateau aux deux joueurs */
    affichage(client[iTargetPlayer].game.l, buffer, BUF_SIZE);
    send_message_to_clients(client, client[iTargetPlayer], actual, buffer);
    send_message_to_clients(client, client[indiceCurrentJoueur], actual, buffer);
