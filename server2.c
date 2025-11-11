@@ -29,40 +29,133 @@ static void end(void)
 
 int affichage(int l[12], char *buffer, size_t taille_buffer)
 {
-    int offset = 0;
-    int i;
+   int i;
+   char tmp[64];
 
+   /* start with empty buffer */
+   if (taille_buffer == 0) return -1;
+   buffer[0] = '\0';
 
-    
-    offset += snprintf(buffer + offset, taille_buffer - offset, "Adversaire: ");
-    for (i = 11; i >= 6 && offset < (int)taille_buffer; i--) {
-        offset += snprintf(buffer + offset, taille_buffer - offset, "%3d ", l[i]);
-    }
-    offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
+   /* Adversaire: */
+   if (strlen(buffer) + strlen("Adversaire: ") < taille_buffer)
+      strcpy(buffer, "Adversaire: ");
+   for (i = 11; i >= 6; i--) {
+      snprintf(tmp, sizeof tmp, "%3d ", l[i]);
+      if (strlen(buffer) + strlen(tmp) < taille_buffer)
+         strcat(buffer, tmp);
+      else break;
+   }
+   if (strlen(buffer) + 1 < taille_buffer) strcat(buffer, "\n");
 
-    
-    offset += snprintf(buffer + offset, taille_buffer - offset, "             ");
-    for (i = 0; i < 6 && offset < (int)taille_buffer; i++) {
-        offset += snprintf(buffer + offset, taille_buffer - offset, "----");
-    }
-    offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
+   /* ligne de séparation */
+   if (strlen(buffer) + strlen("             ") < taille_buffer)
+      strcat(buffer, "             ");
+   for (i = 0; i < 6; i++) {
+      if (strlen(buffer) + 4 < taille_buffer)
+         strcat(buffer, "----");
+      else break;
+   }
+   if (strlen(buffer) + 1 < taille_buffer) strcat(buffer, "\n");
 
-    
-    offset += snprintf(buffer + offset, taille_buffer - offset, "Vous:        ");
-    for (i = 0; i < 6 && offset < (int)taille_buffer; i++) {
-        offset += snprintf(buffer + offset, taille_buffer - offset, "%3d ", l[i]);
-    }
-    offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
+   /* Vous: */
+   if (strlen(buffer) + strlen("Vous:        ") < taille_buffer)
+      strcat(buffer, "Vous:        ");
+   for (i = 0; i < 6; i++) {
+      snprintf(tmp, sizeof tmp, "%3d ", l[i]);
+      if (strlen(buffer) + strlen(tmp) < taille_buffer)
+         strcat(buffer, tmp);
+      else break;
+   }
+   if (strlen(buffer) + 1 < taille_buffer) strcat(buffer, "\n");
 
-    
-    offset += snprintf(buffer + offset, taille_buffer - offset, "             ");
-    for (i = 0; i < 6 && offset < (int)taille_buffer; i++) {
-        offset += snprintf(buffer + offset, taille_buffer - offset, "%3d ", i + 1);
-    }
-    offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
+   /* indices */
+   if (strlen(buffer) + strlen("             ") < taille_buffer)
+      strcat(buffer, "             ");
+   for (i = 0; i < 6; i++) {
+      snprintf(tmp, sizeof tmp, "%3d ", i + 1);
+      if (strlen(buffer) + strlen(tmp) < taille_buffer)
+         strcat(buffer, tmp);
+      else break;
+   }
+   if (strlen(buffer) + 1 < taille_buffer) strcat(buffer, "\n");
 
-    return 0;
+   return 0;
 }
+
+
+// int affichage(int l[12], char *buffer, size_t taille_buffer)
+// {
+//     int offset = 0;
+//     int i;
+
+
+    
+//     offset += snprintf(buffer + offset, taille_buffer - offset, "Adversaire: ");
+//     for (i = 11; i >= 6 && offset < (int)taille_buffer; i--) {
+//         offset += snprintf(buffer + offset, taille_buffer - offset, "%3d ", l[i]);
+//     }
+//     offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
+
+    
+//     offset += snprintf(buffer + offset, taille_buffer - offset, "             ");
+//     for (i = 0; i < 6 && offset < (int)taille_buffer; i++) {
+//         offset += snprintf(buffer + offset, taille_buffer - offset, "----");
+//     }
+//     offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
+
+    
+//     offset += snprintf(buffer + offset, taille_buffer - offset, "Vous:        ");
+//     for (i = 0; i < 6 && offset < (int)taille_buffer; i++) {
+//         offset += snprintf(buffer + offset, taille_buffer - offset, "%3d ", l[i]);
+//     }
+//     offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
+
+    
+//     offset += snprintf(buffer + offset, taille_buffer - offset, "             ");
+//     for (i = 0; i < 6 && offset < (int)taille_buffer; i++) {
+//         offset += snprintf(buffer + offset, taille_buffer - offset, "%3d ", i + 1);
+//     }
+//     offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
+
+//     return 0;
+// }
+
+// int affichage(int l[12], char *buffer, size_t taille_buffer)
+// {
+//     int offset = 0;
+//     int i;
+
+
+    
+//     offset += snprintf(buffer + offset, taille_buffer - offset, "Adversaire: ");
+//     for (i = 11; i >= 6 && offset < (int)taille_buffer; i--) {
+//         offset += snprintf(buffer + offset, taille_buffer - offset, "%3d ", l[i]);
+//     }
+//     offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
+
+    
+//     offset += snprintf(buffer + offset, taille_buffer - offset, "             ");
+//     for (i = 0; i < 6 && offset < (int)taille_buffer; i++) {
+//         offset += snprintf(buffer + offset, taille_buffer - offset, "----");
+//     }
+//     offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
+
+    
+//     offset += snprintf(buffer + offset, taille_buffer - offset, "Vous:        ");
+//     for (i = 0; i < 6 && offset < (int)taille_buffer; i++) {
+//         offset += snprintf(buffer + offset, taille_buffer - offset, "%3d ", l[i]);
+//     }
+//     offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
+
+    
+//     offset += snprintf(buffer + offset, taille_buffer - offset, "             ");
+//     for (i = 0; i < 6 && offset < (int)taille_buffer; i++) {
+//         offset += snprintf(buffer + offset, taille_buffer - offset, "%3d ", i + 1);
+//     }
+//     offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
+
+//     return 0;
+// }
 
 
 // Vérifie si un côté du plateau a encore des graines
@@ -920,7 +1013,7 @@ static void write_client(SOCKET sock, const char *buffer)
    }
 }
 
-void listerJoueurs(Client * client,int actual, char * buffer, size_t taille_buffer)
+void listerJoueurs(Client * client,int actual, char * buffer, size_t taille_buffer, int indiceCurrentJoueur)
 {
    int offset = 0;
    int i;
@@ -929,7 +1022,7 @@ void listerJoueurs(Client * client,int actual, char * buffer, size_t taille_buff
    // Camp adverse
    for (i = 0; i < actual; i++)
    {
-      if(client[i].etat == 0 || client[i].etat == 1)
+      if((client[i].etat == 0 || client[i].etat == 1) && indiceCurrentJoueur != i)
       {
          offset += snprintf(buffer + offset, taille_buffer - offset, client[i].name);
          offset += snprintf(buffer + offset, taille_buffer - offset, "/n");
@@ -938,6 +1031,51 @@ void listerJoueurs(Client * client,int actual, char * buffer, size_t taille_buff
    }
 
    return;
+}
+
+void defierJoueurSpe(char * target, Client * client, int actual, int indiceCurrentJoueur)
+{
+   char buffer[BUF_SIZE];
+   int iTargetPlayer = find_player_name(client, actual, target);
+
+   if (iTargetPlayer == -1 || iTargetPlayer == indiceCurrentJoueur)
+   {
+      snprintf(buffer, BUF_SIZE, "\nJoueur introuvable ou pseudo invalide\n");
+      send_message_to_clients(client, client[indiceCurrentJoueur], actual, buffer);
+      return;
+   }
+
+   if (client[iTargetPlayer].etat != 1)
+   {
+      snprintf(buffer, BUF_SIZE, "\nLe joueur %s n'est pas disponible pour une partie\n", target);
+      send_message_to_clients(client, client[indiceCurrentJoueur], actual, buffer);
+      return;
+   }
+
+
+   client[iTargetPlayer].etat = 2;                        
+   client[indiceCurrentJoueur].etat = 3;        
+
+   strcpy(client[iTargetPlayer].game.nameadv, client[indiceCurrentJoueur].name);
+   strcpy(client[indiceCurrentJoueur].game.nameadv, client[iTargetPlayer].name);
+
+   for (int z = 0; z < 12; z++)
+   {
+      client[iTargetPlayer].game.l[z] = 4;
+      client[indiceCurrentJoueur].game.l[z] = 4;
+   }
+   client[iTargetPlayer].game.score = 0;
+   client[indiceCurrentJoueur].game.score = 0;
+
+   snprintf(buffer, BUF_SIZE, "\n\nPartie trouvée, tu commences!\n\nEnvois j pour jouer ou c pour chatter\n\n");
+   send_message_to_clients(client, client[iTargetPlayer], actual, buffer);
+
+   snprintf(buffer, BUF_SIZE, "\n\nPartie trouvée, ton adversaire commence!\n\nEnvois c pour chatter\n");
+   send_message_to_clients(client, client[indiceCurrentJoueur], actual, buffer);
+
+   affichage(client[iTargetPlayer].game.l, buffer, BUF_SIZE);
+   send_message_to_clients(client, client[iTargetPlayer], actual, buffer);
+   send_message_to_clients(client, client[indiceCurrentJoueur], actual, buffer);
 }
 
 int main(int argc, char **argv)
