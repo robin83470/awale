@@ -495,16 +495,77 @@ static void app(void)
                            send_message_to_clients(clients, clients[i], actual, buffer);  
                         }
                         else if (nb == 3)
-                        {  
+                        {
+                           char target[BUF_SIZE];
+                           char resp[BUF_SIZE];
+                           int p;
+
+                           /* Liste les joueurs disponibles */
                            strcpy(buffer, "\n\nVoici la liste des joueurs disponibles:\n");
                            send_message_to_clients(clients, clients[i], actual, buffer);
-                           listerJoueurs(clients,actual,buffer,BUF_SIZE,i);
-                           send_message_to_clients(clients, clients[i], actual, buffer);
-                           strcpy(buffer, "\n\nIndique le nom de l'adversaire que tu souhaites défier: \n");
+                           listerJoueurs(clients, actual, buffer, BUF_SIZE, i);
                            send_message_to_clients(clients, clients[i], actual, buffer);
 
-                           int repRead = read_client(clients[i].sock, buffer);
-                           defierJoueurSpe(buffer, clients,actual,i);
+                           /* Demande le pseudo de l'adversaire */
+                           strcpy(buffer, "\n\nIndique le nom de l'adversaire que tu souhaites défier (ou 0 pour annuler): \n");
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+
+                           /* Lecture du pseudo demandé par le challenger */
+                           if (read_client(clients[i].sock, target) <= 0)
+                           {
+                            strcpy(buffer, "\nLecture interrompue.\n");
+                            send_message_to_clients(clients, clients[i], actual, buffer);
+                            break;
+                           }
+
+                           /* annulation */
+                           if (strcmp(target, "0") == 0)
+                           {
+                            strcpy(buffer, "\nDéfi annulé.\n");
+                            send_message_to_clients(clients, clients[i], actual, buffer);
+                            break;
+                           }
+
+                           /* trouve le joueur ciblé */
+                           p = find_player_name(clients, actual, target);
+                           if (p == -1 || (clients[p].etat != 0 && clients[p].etat != 1 && clients[p].etat != 5 ) )
+                           {
+                            strcpy(buffer, "\nJoueur introuvable ou non disponible pour une partie\n");
+                            send_message_to_clients(clients, clients[i], actual, buffer);
+                            break;
+                           }
+
+                           /* Envoie la demande de défi au joueur ciblé */
+                           snprintf(buffer, BUF_SIZE, "\nVous avez reçu une demande de défi de %s.\nTapez 1 pour accepter, 0 pour refuser :\n", clients[i].name);
+                           send_message_to_clients(clients, clients[p], actual, buffer);
+
+                           /* Informe le challenger que la demande est envoyée */
+                           snprintf(buffer, BUF_SIZE, "\nDemande de défi envoyée à %s. En attente de sa réponse...\n", clients[p].name);
+                           send_message_to_clients(clients, clients[i], actual, buffer);
+
+                           /* Attend la réponse du joueur ciblé (blocant, comme la logique existante) */
+                           if (read_client(clients[p].sock, resp) <= 0)
+                           {
+                            strcpy(buffer, "\nLe joueur ciblé s'est déconnecté ou lecture interrompue.\n");
+                            send_message_to_clients(clients, clients[i], actual, buffer);
+                            break;
+                           }
+
+                           /* Acceptation */
+                           if (strcmp(resp, "1") == 0)
+                           {
+                            /* Lance la partie : utilise la fonction existante pour initialiser la partie */
+                            /* target contient le nom du joueur ciblé tel que fourni par le challenger */
+                            defierJoueurSpe(target, clients, actual, i);
+                           }
+                           else
+                           {
+                            /* Refus */
+                            snprintf(buffer, BUF_SIZE, "\n%s a refusé votre défi.\n", clients[p].name);
+                            send_message_to_clients(clients, clients[i], actual, buffer);
+                            strcpy(buffer, "\nVous avez refusé le défi.\n");
+                            send_message_to_clients(clients, clients[p], actual, buffer);
+                           }
                         }
                         else
                         {
@@ -896,31 +957,56 @@ static void write_client(SOCKET sock, const char *buffer)
    }
 }
 
-void listerJoueurs(Client * client,int actual, char * buffer, size_t taille_buffer, int indiceCurrentJoueur)
+void listerJoueurs(Client * client, int actual, char * buffer, size_t taille_buffer, int indiceCurrentJoueur)
 {
    int offset = 0;
    int i;
 
-
-   // Camp adverse
+   /* Liste les joueurs disponibles pour s'affronter */
    for (i = 0; i < actual; i++)
    {
-      if((client[i].etat == 0 || client[i].etat == 1) && indiceCurrentJoueur != i)
+      /* Affiche seulement les joueurs en attente (etat == 1) et pas le joueur lui-même */
+      if ((client[i].etat == 1 || client[i].etat == 0) && indiceCurrentJoueur != i)
       {
-         offset += snprintf(buffer + offset, taille_buffer - offset, client[i].name);
-         offset += snprintf(buffer + offset, taille_buffer - offset, "\n");
-
+         offset += snprintf(buffer + offset, taille_buffer - offset, "  - %s\n", client[i].name);
       }
-      
+   }
+
+   /* Message si aucun joueur disponible */
+   if (offset == 0)
+   {
+      snprintf(buffer, taille_buffer, "Aucun joueur disponible pour s'affronter.\n");
    }
 
    return;
 }
-
 void defierJoueurSpe(char * target, Client * client, int actual, int indiceCurrentJoueur)
 {
    char buffer[BUF_SIZE];
-   int iTargetPlayer = find_player_name(client, actual, target);
+   char tgt[BUF_SIZE];
+
+   /* Copie et trim du pseudo cible (enlève espaces et retours chariot) */
+   strncpy(tgt, target, BUF_SIZE - 1);
+   tgt[BUF_SIZE - 1] = '\0';
+
+   /* trim leading */
+   char *start = tgt;
+   while (*start == ' ' || *start == '\t' || *start == '\r' || *start == '\n') start++;
+   if (start != tgt) memmove(tgt, start, strlen(start) + 1);
+
+   /* trim trailing */
+   size_t len = strlen(tgt);
+   while (len > 0 && (tgt[len - 1] == ' ' || tgt[len - 1] == '\t' || tgt[len - 1] == '\r' || tgt[len - 1] == '\n'))
+      tgt[--len] = '\0';
+
+   if (len == 0)
+   {
+      snprintf(buffer, BUF_SIZE, "\nPseudo invalide.\n");
+      send_message_to_clients(client, client[indiceCurrentJoueur], actual, buffer);
+      return;
+   }
+
+   int iTargetPlayer = find_player_name(client, actual, tgt);
 
    if (iTargetPlayer == -1 || iTargetPlayer == indiceCurrentJoueur)
    {
@@ -929,19 +1015,21 @@ void defierJoueurSpe(char * target, Client * client, int actual, int indiceCurre
       return;
    }
 
-   if (client[iTargetPlayer].etat != 1)
+   if (client[iTargetPlayer].etat != 1 && client[iTargetPlayer].etat != 0)
    {
-      snprintf(buffer, BUF_SIZE, "\nLe joueur %s n'est pas disponible pour une partie\n", target);
+      snprintf(buffer, BUF_SIZE, "\nLe joueur %s n'est pas disponible pour une partie\n", tgt);
       send_message_to_clients(client, client[indiceCurrentJoueur], actual, buffer);
       return;
    }
 
+   /* Met en place la partie : iTargetPlayer commencera (etat 2), challenger devient etat 3 */
+   client[iTargetPlayer].etat = 2;
+   client[indiceCurrentJoueur].etat = 3;
 
-   client[iTargetPlayer].etat = 2;                        
-   client[indiceCurrentJoueur].etat = 3;        
-
-   strcpy(client[iTargetPlayer].game.nameadv, client[indiceCurrentJoueur].name);
-   strcpy(client[indiceCurrentJoueur].game.nameadv, client[iTargetPlayer].name);
+   strncpy(client[iTargetPlayer].game.nameadv, client[indiceCurrentJoueur].name, BUF_SIZE - 1);
+   client[iTargetPlayer].game.nameadv[BUF_SIZE - 1] = '\0';
+   strncpy(client[indiceCurrentJoueur].game.nameadv, client[iTargetPlayer].name, BUF_SIZE - 1);
+   client[indiceCurrentJoueur].game.nameadv[BUF_SIZE - 1] = '\0';
 
    for (int z = 0; z < 12; z++)
    {
@@ -951,12 +1039,14 @@ void defierJoueurSpe(char * target, Client * client, int actual, int indiceCurre
    client[iTargetPlayer].game.score = 0;
    client[indiceCurrentJoueur].game.score = 0;
 
+   /* Messages utilisateurs */
    snprintf(buffer, BUF_SIZE, "\n\nPartie trouvée, tu commences!\n\nEnvois j pour jouer ou c pour chatter\n\n");
    send_message_to_clients(client, client[iTargetPlayer], actual, buffer);
 
    snprintf(buffer, BUF_SIZE, "\n\nPartie trouvée, ton adversaire commence!\n\nEnvois c pour chatter\n");
    send_message_to_clients(client, client[indiceCurrentJoueur], actual, buffer);
 
+   /* Envoie affichage du plateau aux deux joueurs */
    affichage(client[iTargetPlayer].game.l, buffer, BUF_SIZE);
    send_message_to_clients(client, client[iTargetPlayer], actual, buffer);
    send_message_to_clients(client, client[indiceCurrentJoueur], actual, buffer);
