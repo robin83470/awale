@@ -602,7 +602,7 @@ static void app(void)
                         if(nb == 0)
                         {
                            clients[i].etat = 0;
-                           strcpy(buffer, "\n\nRecherche annuler\nTu es connecté au serveur, que veux tu faire, 1 pour jouer, 2 pour être spectateur d'une partie\n\n");
+                           strcpy(buffer, "\n\nRecherche annuler\nTu es connecté au serveur, que veux tu faire, 1 pour jouer, 2 pour être spectateur d'une partie, 3 pour défier\n\n");
                            send_message_to_clients(clients, clients[i], actual, buffer);
                         }
                         else
@@ -657,7 +657,7 @@ static void app(void)
                         {
                            clients[i].etat = 0;
                            strcpy(clients[i].namespec, "0");
-                           strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour joueur, 2 pour être spectateur d'une partie\n\n");
+                           strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour joueur, 2 pour être spectateur d'une partie, 3 pour défier\n\n");
                            send_message_to_clients(clients, clients[i], actual, buffer); 
                         }
                         else if(strcmp("c", buffer)==0)
@@ -680,7 +680,7 @@ static void app(void)
                         {
                            clients[i].etat = 0;
                            strcpy(clients[i].namespec, "0"); 
-                           strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour joueur, 2 pour être spectateur d'une partie\n\n");
+                           strcpy(buffer, "\n\nTu es connecté au serveur, que veux tu faire, 1 pour joueur, 2 pour être spectateur d'une partie, 3 pour défier\n\n");
                            send_message_to_clients(clients, clients[i], actual, buffer);
                            break;
                         }
@@ -995,11 +995,12 @@ static void app(void)
 
                            clients[i].etat = 10;  
                            strncpy(clients[i].game.nameadv, target, BUF_SIZE - 1);
-                           clients[i].game.nameadv[BUF_SIZE - 1] = '\0';
-                           printf("salut\n");
+                           //clients[i].game.nameadv[BUF_SIZE - 1] = '\0';
+                           
                            clients[p].etat = 11;
                            strncpy(clients[p].game.nameadv, clients[i].name, BUF_SIZE - 1);
-                           clients[p].game.nameadv[BUF_SIZE - 1] = '\0';
+                           //clients[p].game.nameadv[BUF_SIZE - 1] = '\0';
+                           printf("salut %d\n",clients[i].etat);
                         }
 
                         else
