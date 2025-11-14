@@ -1,3 +1,10 @@
+Auteur:
+ 
+Robin Reunous  (numéro étudiant: 04028131)
+Maxence Heurtault (numéro étudiant: 20241094)
+
+Hexanome: H31
+
 # Projet Serveur de Jeu Awalé
 
 ## 1. Présentation
